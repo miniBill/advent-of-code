@@ -97,15 +97,16 @@ view model =
     in
     column [ spacing, padding ]
         [ dayPickers
+        , button []
+            { onPress = PickFile
+            , label = "Pick File"
+            }
         , case ( String.isEmpty model.input, maybeProcess ) of
-            ( True, _ ) ->
-                button []
-                    { onPress = PickFile
-                    , label = "Pick File"
-                    }
-
-            ( False, Nothing ) ->
+            ( _, Nothing ) ->
                 text "Pick a day"
+
+            ( True, _ ) ->
+                text "Load a file"
 
             ( False, Just process ) ->
                 el [ Font.family [ Font.monospace ] ]
@@ -146,7 +147,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         DayChosen i ->
-            ( { input = "", day = i }, Cmd.none )
+            ( { model | day = i }, Cmd.none )
 
         GotFile file ->
             ( model
