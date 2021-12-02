@@ -10,7 +10,8 @@ import Element.Font as Font
 import Element.Input as Input
 import File exposing (File)
 import File.Select
-import Parser exposing (Parser)
+import List.Extra
+import Parser exposing (Parser, Problem(..))
 import Result.Extra
 import Task
 
@@ -139,7 +140,101 @@ withParser parser f lines =
             String.fromInt <| f o
 
         Err ( line, err ) ->
-            "Failed to parse line \"" ++ line ++ "\"" ++ Debug.toString err
+            let
+                errorString =
+                    deadEndsToString err line
+            in
+            "Failed to parse line:\n\n" ++ errorString
+
+
+deadEndsToString : List Parser.DeadEnd -> String -> String
+deadEndsToString err line =
+    let
+        indentedLine =
+            "    " ++ line ++ "\n"
+
+        marker col =
+            "\n" ++ String.repeat (4 + col - 1) " " ++ "^-- "
+    in
+    err
+        |> List.Extra.gatherEqualsBy .col
+        |> List.map
+            (\( h, t ) ->
+                let
+                    ( expected, unexpected ) =
+                        formatProblems (h :: t)
+
+                    combine labelOne labelMore pieces =
+                        case List.reverse pieces of
+                            [] ->
+                                ""
+
+                            [ es ] ->
+                                marker h.col ++ labelOne ++ " " ++ es
+
+                            eh :: et ->
+                                marker h.col ++ labelMore ++ " " ++ String.join ", " (List.reverse et) ++ " or " ++ eh
+
+                    expectedString =
+                        combine "expected" "expected one of" expected
+
+                    unexpectedString =
+                        combine "unexpected" "unexpected" unexpected
+                in
+                indentedLine ++ expectedString ++ unexpectedString
+            )
+        |> String.join "\n\n"
+
+
+formatProblems : List { a | problem : Parser.Problem } -> ( List String, List String )
+formatProblems problems =
+    problems
+        |> List.foldr
+            (\{ problem } ( exp, unexp ) ->
+                case problem of
+                    Expecting s ->
+                        ( s :: exp, unexp )
+
+                    ExpectingInt ->
+                        ( "an integer" :: exp, unexp )
+
+                    ExpectingHex ->
+                        ( "an hex number" :: exp, unexp )
+
+                    ExpectingOctal ->
+                        ( "an octal number" :: exp, unexp )
+
+                    ExpectingBinary ->
+                        ( "a binary number" :: exp, unexp )
+
+                    ExpectingFloat ->
+                        ( "a float" :: exp, unexp )
+
+                    ExpectingNumber ->
+                        ( "a number" :: exp, unexp )
+
+                    ExpectingVariable ->
+                        ( "a variable" :: exp, unexp )
+
+                    ExpectingSymbol s ->
+                        ( ("\"" ++ s ++ "\"") :: exp, unexp )
+
+                    ExpectingKeyword k ->
+                        ( ("\"" ++ k ++ "\"") :: exp, unexp )
+
+                    ExpectingEnd ->
+                        ( "the end of the line" :: exp, unexp )
+
+                    UnexpectedChar ->
+                        ( exp, "character" :: unexp )
+
+                    Problem p ->
+                        ( exp, ("problem " ++ p) :: unexp )
+
+                    BadRepeat ->
+                        ( exp, "repetition" :: unexp )
+            )
+            ( [], [] )
 
 
 button : List (Attribute msg) -> { onPress : msg, label : String } -> Element msg
