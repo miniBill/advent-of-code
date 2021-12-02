@@ -14,6 +14,7 @@ import Parser exposing (Parser, Problem(..))
 import Result.Extra
 import Task
 import Y2020.Day1
+import Y2020.Day2
 import Y2021.Day1
 import Y2021.Day2
 
@@ -62,6 +63,7 @@ view model =
         years =
             [ ( 2020
               , [ day Y2020.Day1.parser Y2020.Day1.process Y2020.Day1.processGold
+                , day Y2020.Day2.parser Y2020.Day2.process Y2020.Day2.processGold
                 ]
               )
             , ( 2021
