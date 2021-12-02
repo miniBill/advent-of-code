@@ -1,4 +1,4 @@
-module Day2 exposing (parser, process, processGold)
+module Y2021.Day2 exposing (parser, process, processGold)
 
 import Parser exposing ((|.), (|=), Parser)
 

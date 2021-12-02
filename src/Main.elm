@@ -1,8 +1,7 @@
 module Main exposing (main)
 
 import Browser
-import Day1
-import Day2
+import Dict
 import Element exposing (Attribute, Element, column, el, text, wrappedRow)
 import Element.Background as Background
 import Element.Border as Border
@@ -14,6 +13,8 @@ import List.Extra
 import Parser exposing (Parser, Problem(..))
 import Result.Extra
 import Task
+import Y2021.Day1
+import Y2021.Day2
 
 
 type alias Flags =
@@ -22,12 +23,13 @@ type alias Flags =
 
 type alias Model =
     { input : String
+    , year : Int
     , index : Int
     }
 
 
 type Msg
-    = IndexChosen Int
+    = IndexChosen Int Int
     | PickFile
     | GotFile File
     | ReadFile String
@@ -45,7 +47,10 @@ main =
 
 init : Flags -> ( Model, Cmd msg )
 init _ =
-    ( { input = "", index = -1 }
+    ( { input = ""
+      , year = -1
+      , index = -1
+      }
     , Cmd.none
     )
 
@@ -53,18 +58,29 @@ init _ =
 view : Model -> Element Msg
 view model =
     let
-        processes =
-            [ day Day1.parser Day1.process Day1.processGold
-            , day Day2.parser Day2.process Day2.processGold
+        years =
+            [ ( 2021
+              , [ day Y2021.Day1.parser Y2021.Day1.process Y2021.Day1.processGold
+                , day Y2021.Day2.parser Y2021.Day2.process Y2021.Day2.processGold
+                ]
+              )
             ]
-                |> List.concat
+                |> List.map (Tuple.mapSecond List.concat)
+                |> Dict.fromList
 
         dayPickers =
-            List.range 0 (List.length processes - 1)
-                |> List.map dayPicker
-                |> wrappedRow [ spacing ]
+            years
+                |> Dict.toList
+                |> List.map
+                    (\( year, processes ) ->
+                        List.range 0 (List.length processes - 1)
+                            |> List.map (dayPicker year)
+                            |> (::) (text <| String.fromInt year ++ ": ")
+                            |> wrappedRow [ spacing ]
+                    )
+                |> column [ spacing ]
 
-        dayPicker index =
+        dayPicker year index =
             let
                 label =
                     "Day "
@@ -87,14 +103,17 @@ view model =
 
             else
                 button []
-                    { onPress = IndexChosen index
+                    { onPress = IndexChosen year index
                     , label = label
                     }
 
         maybeProcess =
-            processes
-                |> List.drop model.index
-                |> List.head
+            years
+                |> Dict.get model.year
+                |> Maybe.andThen
+                    (List.drop model.index
+                        >> List.head
+                    )
     in
     column [ spacing, padding ]
         [ dayPickers
@@ -269,8 +288,13 @@ rythm =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        IndexChosen i ->
-            ( { model | index = i }, Cmd.none )
+        IndexChosen year index ->
+            ( { model
+                | year = year
+                , index = index
+              }
+            , Cmd.none
+            )
 
         GotFile file ->
             ( model
