@@ -13,6 +13,7 @@ import List.Extra
 import Parser exposing (Parser, Problem(..))
 import Result.Extra
 import Task
+import Y2020.Day1
 import Y2021.Day1
 import Y2021.Day2
 
@@ -59,7 +60,11 @@ view : Model -> Element Msg
 view model =
     let
         years =
-            [ ( 2021
+            [ ( 2020
+              , [ day Y2020.Day1.parser Y2020.Day1.process Y2020.Day1.processGold
+                ]
+              )
+            , ( 2021
               , [ day Y2021.Day1.parser Y2021.Day1.process Y2021.Day1.processGold
                 , day Y2021.Day2.parser Y2021.Day2.process Y2021.Day2.processGold
                 ]
@@ -92,7 +97,7 @@ view model =
                                 "*"
                            )
             in
-            if index == model.index then
+            if year == model.year && index == model.index then
                 el
                     [ Border.width 1
                     , Border.rounded rythm
