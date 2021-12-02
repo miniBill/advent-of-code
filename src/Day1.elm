@@ -1,17 +1,16 @@
-module Day1 exposing (process, processGold)
+module Day1 exposing (parser, process, processGold)
+
+import Parser exposing (Parser)
 
 
-parse : List String -> List Int
-parse lines =
-    List.filterMap String.toInt lines
+parser : Parser Int
+parser =
+    Parser.int
 
 
-process : List String -> String
+process : List Int -> Int
 process lines =
-    case parse lines of
-        [] ->
-            "Invalid input"
-
+    case lines of
         h :: t ->
             t
                 |> List.foldl
@@ -26,12 +25,14 @@ process lines =
                     )
                     ( 0, h )
                 |> Tuple.first
-                |> String.fromInt
+
+        [] ->
+            0
 
 
-processGold : List String -> String
+processGold : List Int -> Int
 processGold lines =
-    case parse lines of
+    case lines of
         ha :: hb :: hc :: t ->
             t
                 |> List.foldl
@@ -46,7 +47,6 @@ processGold lines =
                     )
                     ( 0, ( ha, hb, hc ) )
                 |> Tuple.first
-                |> String.fromInt
 
         _ ->
-            "Invalid input"
+            0

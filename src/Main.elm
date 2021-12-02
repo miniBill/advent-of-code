@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Day1
+import Day2
 import Element exposing (Attribute, Element, column, el, text, wrappedRow)
 import Element.Background as Background
 import Element.Border as Border
@@ -9,6 +10,8 @@ import Element.Font as Font
 import Element.Input as Input
 import File exposing (File)
 import File.Select
+import Parser exposing (Parser)
+import Result.Extra
 import Task
 
 
@@ -18,12 +21,12 @@ type alias Flags =
 
 type alias Model =
     { input : String
-    , day : Int
+    , index : Int
     }
 
 
 type Msg
-    = DayChosen Int
+    = IndexChosen Int
     | PickFile
     | GotFile File
     | ReadFile String
@@ -41,7 +44,7 @@ main =
 
 init : Flags -> ( Model, Cmd msg )
 init _ =
-    ( { input = "", day = -1 }
+    ( { input = "", index = -1 }
     , Cmd.none
     )
 
@@ -49,27 +52,30 @@ init _ =
 view : Model -> Element Msg
 view model =
     let
-        maxDay =
-            3
+        processes =
+            [ day Day1.parser Day1.process Day1.processGold
+            , day Day2.parser Day2.process Day2.processGold
+            ]
+                |> List.concat
 
         dayPickers =
-            List.range 2 maxDay
+            List.range 0 (List.length processes - 1)
                 |> List.map dayPicker
                 |> wrappedRow [ spacing ]
 
-        dayPicker day =
+        dayPicker index =
             let
                 label =
                     "Day "
-                        ++ String.fromInt (day // 2)
-                        ++ (if modBy 2 day == 0 then
+                        ++ String.fromInt (index // 2 + 1)
+                        ++ (if modBy 2 index == 0 then
                                 ""
 
                             else
                                 "*"
                            )
             in
-            if day == model.day then
+            if index == model.index then
                 el
                     [ Border.width 1
                     , Border.rounded rythm
@@ -80,20 +86,14 @@ view model =
 
             else
                 button []
-                    { onPress = DayChosen day
+                    { onPress = IndexChosen index
                     , label = label
                     }
 
         maybeProcess =
-            case model.day of
-                2 ->
-                    Just <| Day1.process
-
-                3 ->
-                    Just <| Day1.processGold
-
-                _ ->
-                    Nothing
+            processes
+                |> List.drop model.index
+                |> List.head
     in
     column [ spacing, padding ]
         [ dayPickers
@@ -112,6 +112,34 @@ view model =
                 el [ Font.family [ Font.monospace ] ]
                     (text <| process <| String.split "\n" model.input)
         ]
+
+
+day : Parser a -> (List a -> Int) -> (List a -> Int) -> List (List String -> String)
+day parser first second =
+    [ withParser parser first
+    , withParser parser second
+    ]
+
+
+withParser : Parser a -> (List a -> Int) -> List String -> String
+withParser parser f lines =
+    let
+        parsed =
+            lines
+                |> List.filter (not << String.isEmpty)
+                |> Result.Extra.combineMap
+                    (\line ->
+                        Result.mapError
+                            (Tuple.pair line)
+                            (Parser.run parser line)
+                    )
+    in
+    case parsed of
+        Ok o ->
+            String.fromInt <| f o
+
+        Err ( line, err ) ->
+            "Failed to parse line \"" ++ line ++ "\"" ++ Debug.toString err
 
 
 button : List (Attribute msg) -> { onPress : msg, label : String } -> Element msg
@@ -146,8 +174,8 @@ rythm =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        DayChosen i ->
-            ( { model | day = i }, Cmd.none )
+        IndexChosen i ->
+            ( { model | index = i }, Cmd.none )
 
         GotFile file ->
             ( model
