@@ -15,6 +15,7 @@ import Result.Extra
 import Task
 import Y2020.Day1
 import Y2020.Day2
+import Y2020.Day3
 import Y2021.Day1
 import Y2021.Day2
 
@@ -62,13 +63,14 @@ view model =
     let
         years =
             [ ( 2020
-              , [ day Y2020.Day1.parser Y2020.Day1.process Y2020.Day1.processGold
-                , day Y2020.Day2.parser Y2020.Day2.process Y2020.Day2.processGold
+              , [ dayI Y2020.Day1.parser Y2020.Day1.process Y2020.Day1.processGold
+                , dayI Y2020.Day2.parser Y2020.Day2.process Y2020.Day2.processGold
+                , dayI Y2020.Day3.parser Y2020.Day3.process Y2020.Day3.processGold
                 ]
               )
             , ( 2021
-              , [ day Y2021.Day1.parser Y2021.Day1.process Y2021.Day1.processGold
-                , day Y2021.Day2.parser Y2021.Day2.process Y2021.Day2.processGold
+              , [ dayI Y2021.Day1.parser Y2021.Day1.process Y2021.Day1.processGold
+                , dayI Y2021.Day2.parser Y2021.Day2.process Y2021.Day2.processGold
                 ]
               )
             ]
@@ -141,14 +143,19 @@ view model =
         ]
 
 
-day : Parser a -> (List a -> Int) -> (List a -> Int) -> List (List String -> String)
-day parser first second =
+dayI : Parser a -> (List a -> Int) -> (List a -> Int) -> List (List String -> String)
+dayI parser first second =
+    dayS parser (first >> String.fromInt) (second >> String.fromInt)
+
+
+dayS : Parser a -> (List a -> String) -> (List a -> String) -> List (List String -> String)
+dayS parser first second =
     [ withParser parser first
     , withParser parser second
     ]
 
 
-withParser : Parser a -> (List a -> Int) -> List String -> String
+withParser : Parser a -> (List a -> String) -> List String -> String
 withParser parser f lines =
     let
         parsed =
@@ -163,7 +170,7 @@ withParser parser f lines =
     in
     case parsed of
         Ok o ->
-            String.fromInt <| f o
+            f o
 
         Err ( line, err ) ->
             let
