@@ -19,6 +19,7 @@ import Y2020.Day3
 import Y2020.Day4
 import Y2020.Day5
 import Y2020.Day6
+import Y2020.Day7
 import Y2021.Day1
 import Y2021.Day2
 
@@ -72,6 +73,7 @@ view model =
                 , dayI Y2020.Day4.parser Y2020.Day4.process Y2020.Day4.processGold
                 , dayI Y2020.Day5.parser Y2020.Day5.process Y2020.Day5.processGold
                 , dayI Y2020.Day6.parser Y2020.Day6.process Y2020.Day6.processGold
+                , dayI Y2020.Day7.parser Y2020.Day7.process Y2020.Day7.processGold
                 ]
               )
             , ( 2021
