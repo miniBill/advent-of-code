@@ -1,6 +1,6 @@
 module Y2020.Day1 exposing (parser, process, processGold)
 
-import Parser exposing ((|.), (|=), Parser)
+import Parser exposing (Parser)
 import Set
 
 

@@ -1,6 +1,6 @@
 module Y2020.Day3 exposing (parser, process, processGold)
 
-import Parser exposing ((|.), (|=), Parser)
+import Parser exposing (Parser)
 
 
 type alias Item =
