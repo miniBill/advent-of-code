@@ -1,6 +1,7 @@
 module Y2020.Day5 exposing (parser, process, processGold)
 
 import Parser exposing ((|.), (|=), Parser)
+import Parser.Extras
 
 
 type alias Item =
@@ -13,14 +14,7 @@ parser =
         item =
             Parser.getChompedString (Parser.chompIf (always True))
     in
-    Parser.sequence
-        { start = ""
-        , end = ""
-        , separator = ""
-        , spaces = Parser.succeed ()
-        , trailing = Parser.Optional
-        , item = item
-        }
+    Parser.Extras.many item
         |> Parser.map
             (List.foldl
                 (\e a ->

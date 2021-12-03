@@ -9,7 +9,7 @@ type alias Item =
 
 parser : Parser Item
 parser =
-    Parser.getChompedString <| Parser.chompWhile (always True)
+    Parser.getSource
 
 
 process : List Item -> Int

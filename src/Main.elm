@@ -22,6 +22,7 @@ import Y2020.Day6
 import Y2020.Day7
 import Y2021.Day1
 import Y2021.Day2
+import Y2021.Day3
 
 
 type alias Flags =
@@ -79,6 +80,7 @@ view model =
             , ( 2021
               , [ dayI Y2021.Day1.parser Y2021.Day1.process Y2021.Day1.processGold
                 , dayI Y2021.Day2.parser Y2021.Day2.process Y2021.Day2.processGold
+                , dayI Y2021.Day3.parser Y2021.Day3.process Y2021.Day3.processGold
                 ]
               )
             ]

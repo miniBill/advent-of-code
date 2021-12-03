@@ -11,8 +11,7 @@ type alias Item =
 
 parser : Parser Item
 parser =
-    Parser.chompWhile (always True)
-        |> Parser.getChompedString
+    Parser.getSource
         |> Parser.map (String.toList >> Set.fromList)
 
 
