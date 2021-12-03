@@ -10,34 +10,25 @@ type alias Item =
 
 parser : Parser Item
 parser =
-    Parser.getSource
-        |> Parser.map
-            (\line ->
-                line
-                    |> String.toList
-                    |> List.filterMap (String.fromChar >> String.toInt)
-            )
+    Parser.map
+        (\line ->
+            line
+                |> String.toList
+                |> List.filterMap (String.fromChar >> String.toInt)
+        )
+        Parser.getSource
 
 
 process : List Item -> Int
 process lines =
     let
-        transposed =
+        ( gamma, epsilon ) =
             lines
                 |> List.Extra.transpose
-
-        go common =
-            transposed
-                |> List.map (getCommon common)
-                |> listToBinary
-
-        gamma =
-            go Most
-
-        epsilon =
-            go Least
+                |> List.map (\l -> ( getCommon Most l, getCommon Least l ))
+                |> List.unzip
     in
-    gamma * epsilon
+    listToBinary gamma * listToBinary epsilon
 
 
 type Common
@@ -83,37 +74,45 @@ listToBinary =
 processGold : List Item -> Int
 processGold lines =
     let
-        go common left =
-            case left of
-                [] :: _ ->
-                    []
+        o2 =
+            listToBinary <| goldHelper Most lines
 
-                [ x ] ->
-                    x
-
-                _ ->
-                    let
-                        unpacked =
-                            List.filterMap List.Extra.uncons left
-
-                        chosen =
-                            unpacked
-                                |> List.map Tuple.first
-                                |> getCommon common
-
-                        tail =
-                            go common
-                                (List.filterMap
-                                    (\( first, rest ) ->
-                                        if first == chosen then
-                                            Just rest
-
-                                        else
-                                            Nothing
-                                    )
-                                    unpacked
-                                )
-                    in
-                    chosen :: tail
+        co2 =
+            listToBinary <| goldHelper Least lines
     in
-    listToBinary (go Most lines) * listToBinary (go Least lines)
+    o2 * co2
+
+
+goldHelper : Common -> List Item -> Item
+goldHelper common left =
+    case left of
+        [] :: _ ->
+            []
+
+        [ x ] ->
+            x
+
+        _ ->
+            let
+                unpacked =
+                    List.filterMap List.Extra.uncons left
+
+                chosen =
+                    unpacked
+                        |> List.map Tuple.first
+                        |> getCommon common
+
+                tail =
+                    goldHelper common
+                        (List.filterMap
+                            (\( first, rest ) ->
+                                if first == chosen then
+                                    Just rest
+
+                                else
+                                    Nothing
+                            )
+                            unpacked
+                        )
+            in
+            chosen :: tail
