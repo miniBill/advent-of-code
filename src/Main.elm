@@ -11,7 +11,6 @@ import File exposing (File)
 import File.Select
 import List.Extra
 import Parser exposing (Parser, Problem(..))
-import Result.Extra
 import Task
 import Y2020.Day1
 import Y2020.Day2
@@ -23,6 +22,7 @@ import Y2020.Day7
 import Y2021.Day1
 import Y2021.Day2
 import Y2021.Day3
+import Y2021.Day4
 
 
 type alias Flags =
@@ -68,19 +68,20 @@ view model =
     let
         years =
             [ ( 2020
-              , [ dayI Y2020.Day1.parser Y2020.Day1.process Y2020.Day1.processGold
-                , dayI Y2020.Day2.parser Y2020.Day2.process Y2020.Day2.processGold
-                , dayI Y2020.Day3.parser Y2020.Day3.process Y2020.Day3.processGold
-                , dayI Y2020.Day4.parser Y2020.Day4.process Y2020.Day4.processGold
-                , dayI Y2020.Day5.parser Y2020.Day5.process Y2020.Day5.processGold
-                , dayI Y2020.Day6.parser Y2020.Day6.process Y2020.Day6.processGold
-                , dayI Y2020.Day7.parser Y2020.Day7.process Y2020.Day7.processGold
+              , [ dayISplit Y2020.Day1.parser Y2020.Day1.process Y2020.Day1.processGold
+                , dayISplit Y2020.Day2.parser Y2020.Day2.process Y2020.Day2.processGold
+                , dayISplit Y2020.Day3.parser Y2020.Day3.process Y2020.Day3.processGold
+                , dayISplit Y2020.Day4.parser Y2020.Day4.process Y2020.Day4.processGold
+                , dayISplit Y2020.Day5.parser Y2020.Day5.process Y2020.Day5.processGold
+                , dayISplit Y2020.Day6.parser Y2020.Day6.process Y2020.Day6.processGold
+                , dayISplit Y2020.Day7.parser Y2020.Day7.process Y2020.Day7.processGold
                 ]
               )
             , ( 2021
-              , [ dayI Y2021.Day1.parser Y2021.Day1.process Y2021.Day1.processGold
-                , dayI Y2021.Day2.parser Y2021.Day2.process Y2021.Day2.processGold
-                , dayI Y2021.Day3.parser Y2021.Day3.process Y2021.Day3.processGold
+              , [ dayISplit Y2021.Day1.parser Y2021.Day1.process Y2021.Day1.processGold
+                , dayISplit Y2021.Day2.parser Y2021.Day2.process Y2021.Day2.processGold
+                , dayISplit Y2021.Day3.parser Y2021.Day3.process Y2021.Day3.processGold
+                , dayS Y2021.Day4.parser Y2021.Day4.process Y2021.Day4.processGold
                 ]
               )
             ]
@@ -149,58 +150,78 @@ view model =
 
             ( False, Just process ) ->
                 el [ Font.family [ Font.monospace ] ]
-                    (text <| process <| String.split "\n" model.input)
+                    (text <| process model.input)
         ]
 
 
-dayI : Parser a -> (List a -> Int) -> (List a -> Int) -> List (List String -> String)
-dayI parser first second =
-    dayS parser (first >> String.fromInt) (second >> String.fromInt)
+dayISplit : Parser a -> (List a -> Int) -> (List a -> Int) -> List (String -> String)
+dayISplit parser first second =
+    daySSplit parser (first >> String.fromInt) (second >> String.fromInt)
 
 
-dayS : Parser a -> (List a -> String) -> (List a -> String) -> List (List String -> String)
+daySSplit : Parser a -> (List a -> String) -> (List a -> String) -> List (String -> String)
+daySSplit parser =
+    let
+        listParser =
+            Parser.sequence
+                { start = ""
+                , end = ""
+                , separator = "\n"
+                , item = parser
+                , spaces = Parser.succeed ()
+                , trailing = Parser.Optional
+                }
+    in
+    dayS listParser
+
+
+dayS : Parser a -> (a -> String) -> (a -> String) -> List (String -> String)
 dayS parser first second =
     [ withParser parser first
     , withParser parser second
     ]
 
 
-withParser : Parser a -> (List a -> String) -> List String -> String
-withParser parser f lines =
+withParser : Parser a -> (a -> String) -> String -> String
+withParser parser f source =
     let
         parsed =
-            lines
-                |> List.Extra.dropWhileRight String.isEmpty
-                |> Result.Extra.combineMap
-                    (\line ->
-                        Result.mapError
-                            (Tuple.pair line)
-                            (Parser.run parser line)
-                    )
+            source
+                |> String.trimRight
+                |> Parser.run parser
     in
     case parsed of
         Ok o ->
             f o
 
-        Err ( line, err ) ->
+        Err err ->
             let
                 errorString =
-                    deadEndsToString err line
+                    deadEndsToString err source
             in
             "Failed to parse line:\n\n" ++ errorString
 
 
 deadEndsToString : List Parser.DeadEnd -> String -> String
-deadEndsToString err line =
+deadEndsToString err source =
     let
-        indentedLine =
-            "    " ++ line ++ "\n"
+        lines =
+            String.split "\n" source
+
+        getLine line =
+            lines
+                |> List.drop (line - 1)
+                |> List.head
+                |> Maybe.withDefault ""
+
+        indentedLine line =
+            "    " ++ getLine line ++ "\n"
 
         marker col =
             "\n" ++ String.repeat (4 + col - 1) " " ++ "^-- "
     in
     err
-        |> List.Extra.gatherEqualsBy .col
+        |> List.Extra.gatherEqualsBy (\e -> { row = e.row, col = e.col })
         |> List.map
             (\( h, t ) ->
                 let
@@ -224,7 +245,7 @@ deadEndsToString err line =
                     unexpectedString =
                         combine "unexpected" "unexpected" unexpected
                 in
-                indentedLine ++ expectedString ++ unexpectedString
+                indentedLine h.row ++ expectedString ++ unexpectedString
             )
         |> String.join "\n\n"
 
