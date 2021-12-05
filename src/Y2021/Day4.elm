@@ -2,7 +2,6 @@ module Y2021.Day4 exposing (parser, process, processGold)
 
 import List.Extra
 import Parser exposing ((|.), (|=), Parser)
-import Parser.Extras
 
 
 type alias Item =
@@ -28,7 +27,7 @@ parser =
     Parser.succeed (\header boards -> { header = header, boards = boards })
         |= headerParser
         |. Parser.symbol "\n"
-        |= Parser.Extras.many boardParser
+        |= Parser.map parseBoards (Parser.getChompedString <| Parser.chompUntilEndOr "!!!")
 
 
 headerParser : Parser (List Int)
@@ -43,27 +42,28 @@ headerParser =
         }
 
 
-boardParser : Parser Board
-boardParser =
-    Parser.succeed (\a b c d e -> [ a, b, c, d, e ])
-        |. Parser.symbol "\n"
-        |= lineParser
-        |= lineParser
-        |= lineParser
-        |= lineParser
-        |= lineParser
+parseBoards : String -> List Board
+parseBoards input =
+    input
+        |> String.split "\n\n"
+        |> List.map parseBoard
 
 
-lineParser : Parser Line
-lineParser =
-    Parser.sequence
-        { start = ""
-        , spaces = Parser.spaces
-        , separator = ""
-        , end = "\n"
-        , item = Parser.map (Tuple.pair False) Parser.int
-        , trailing = Parser.Optional
-        }
+parseBoard : String -> Board
+parseBoard input =
+    input
+        |> String.split "\n"
+        |> List.map parseLine
+
+
+parseLine : String -> Line
+parseLine input =
+    input
+        |> String.split " "
+        |> List.map String.trim
+        |> List.Extra.filterNot String.isEmpty
+        |> List.filterMap String.toInt
+        |> List.map (Tuple.pair False)
 
 
 process : Item -> String
@@ -84,15 +84,20 @@ processHelper numbers boards =
             in
             case List.Extra.find isWinningBoard boards_ of
                 Just winning ->
-                    winning
-                        |> List.concatMap (List.Extra.filterNot Tuple.first)
-                        |> List.map Tuple.second
-                        |> List.sum
-                        |> (*) n
-                        |> String.fromInt
+                    score winning n
 
                 Nothing ->
                     processHelper ns boards_
+
+
+score : Board -> Int -> String
+score winning n =
+    winning
+        |> List.concatMap (List.Extra.filterNot Tuple.first)
+        |> List.map Tuple.second
+        |> List.sum
+        |> (*) n
+        |> String.fromInt
 
 
 isWinningBoard : Board -> Bool
@@ -111,5 +116,28 @@ mark n =
 
 
 processGold : Item -> String
-processGold _ =
-    "TODO"
+processGold { header, boards } =
+    processGoldHelper header boards
+
+
+processGoldHelper : List Int -> List Board -> String
+processGoldHelper numbers boards =
+    case numbers of
+        [] ->
+            "Some boards never win"
+
+        n :: ns ->
+            let
+                boards_ =
+                    List.map (mark n) boards
+            in
+            case boards_ of
+                [ b ] ->
+                    if isWinningBoard b then
+                        score b n
+
+                    else
+                        processGoldHelper ns boards_
+
+                _ ->
+                    processGoldHelper ns (List.Extra.filterNot isWinningBoard boards_)

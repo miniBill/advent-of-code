@@ -257,7 +257,7 @@ formatProblems problems =
             (\{ problem } ( exp, unexp ) ->
                 case problem of
                     Expecting s ->
-                        ( s :: exp, unexp )
+                        ( escape s :: exp, unexp )
 
                     ExpectingInt ->
                         ( "an integer" :: exp, unexp )
@@ -281,13 +281,13 @@ formatProblems problems =
                         ( "a variable" :: exp, unexp )
 
                     ExpectingSymbol s ->
-                        ( ("\"" ++ s ++ "\"") :: exp, unexp )
+                        ( ("\"" ++ escape s ++ "\"") :: exp, unexp )
 
                     ExpectingKeyword k ->
-                        ( ("\"" ++ k ++ "\"") :: exp, unexp )
+                        ( ("\"" ++ escape k ++ "\"") :: exp, unexp )
 
                     ExpectingEnd ->
-                        ( "the end of the line" :: exp, unexp )
+                        ( "the end of the input" :: exp, unexp )
 
                     UnexpectedChar ->
                         ( exp, "character" :: unexp )
@@ -299,6 +299,11 @@ formatProblems problems =
                         ( exp, "repetition" :: unexp )
             )
             ( [], [] )
+
+
+escape : String -> String
+escape s =
+    s |> String.replace "\n" "\\n" |> String.replace "\t" "\\t"
 
 
 button : List (Attribute msg) -> { onPress : msg, label : String } -> Element msg
