@@ -24,6 +24,7 @@ import Y2021.Day2
 import Y2021.Day3
 import Y2021.Day4
 import Y2021.Day5
+import Y2021.Day6
 
 
 type alias Flags =
@@ -84,6 +85,7 @@ view model =
                 , dayISplit Y2021.Day3.parser Y2021.Day3.process Y2021.Day3.processGold
                 , dayS Y2021.Day4.parser Y2021.Day4.process Y2021.Day4.processGold
                 , daySSplit Y2021.Day5.parser Y2021.Day5.process Y2021.Day5.processGold
+                , dayS Y2021.Day6.parser Y2021.Day6.process Y2021.Day6.processGold
                 ]
               )
             ]
