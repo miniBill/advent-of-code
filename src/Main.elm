@@ -26,6 +26,7 @@ import Y2021.Day4
 import Y2021.Day5
 import Y2021.Day6
 import Y2021.Day7
+import Y2021.Day8
 
 
 type alias Flags =
@@ -88,6 +89,7 @@ view model =
                 , daySSplit Y2021.Day5.parser Y2021.Day5.process Y2021.Day5.processGold
                 , dayS Y2021.Day6.parser Y2021.Day6.process Y2021.Day6.processGold
                 , dayS Y2021.Day7.parser Y2021.Day7.process Y2021.Day7.processGold
+                , daySplit Y2021.Day8.parser Y2021.Day8.process Y2021.Day8.processGold
                 ]
               )
             ]
@@ -155,17 +157,52 @@ view model =
                 text "Load a file"
 
             ( False, Just process ) ->
-                el [ Font.family [ Font.monospace ] ]
-                    (text <| process model.input)
+                let
+                    { output, log } =
+                        process model.input
+                in
+                column [ spacing ] <|
+                    List.concat
+                        [ if String.isEmpty log then
+                            []
+
+                          else
+                            [ text "Log"
+                            , el
+                                [ Border.width 1
+                                , padding
+                                , Font.family [ Font.monospace ]
+                                ]
+                                (text log)
+                            ]
+                        , [ text "Output"
+                          , el
+                                [ Border.width 1
+                                , padding
+                                , Font.family [ Font.monospace ]
+                                ]
+                                (text output)
+                          ]
+                        ]
         ]
 
 
-dayISplit : Parser a -> (List a -> Int) -> (List a -> Int) -> List (String -> String)
+type alias Day =
+    String -> DayOutput
+
+
+type alias DayOutput =
+    { output : String
+    , log : String
+    }
+
+
+dayISplit : Parser a -> (List a -> Int) -> (List a -> Int) -> List Day
 dayISplit parser first second =
     daySSplit parser (first >> String.fromInt) (second >> String.fromInt)
 
 
-daySSplit : Parser a -> (List a -> String) -> (List a -> String) -> List (String -> String)
+daySSplit : Parser a -> (List a -> String) -> (List a -> String) -> List Day
 daySSplit parser =
     let
         listParser =
@@ -181,14 +218,46 @@ daySSplit parser =
     dayS listParser
 
 
-dayS : Parser a -> (a -> String) -> (a -> String) -> List (String -> String)
+daySplit : Parser a -> (List a -> DayOutput) -> (List a -> DayOutput) -> List Day
+daySplit parser =
+    let
+        listParser =
+            Parser.sequence
+                { start = ""
+                , end = ""
+                , separator = "\n"
+                , item = parser
+                , spaces = Parser.succeed ()
+                , trailing = Parser.Optional
+                }
+    in
+    day listParser
+
+
+dayS : Parser a -> (a -> String) -> (a -> String) -> List Day
 dayS parser first second =
+    [ withParserS parser first
+    , withParserS parser second
+    ]
+
+
+day : Parser a -> (a -> DayOutput) -> (a -> DayOutput) -> List Day
+day parser first second =
     [ withParser parser first
     , withParser parser second
     ]
 
 
-withParser : Parser a -> (a -> String) -> String -> String
+withParserS : Parser a -> (a -> String) -> Day
+withParserS parser f =
+    withParser parser <|
+        \input ->
+            { output = f input
+            , log = ""
+            }
+
+
+withParser : Parser a -> (a -> DayOutput) -> Day
 withParser parser f source =
     let
         parsed =
@@ -205,7 +274,9 @@ withParser parser f source =
                 errorString =
                     deadEndsToString err source
             in
-            "Failed to parse line:\n\n" ++ errorString
+            { log = "Failed to parse line:\n\n" ++ errorString
+            , output = ""
+            }
 
 
 deadEndsToString : List Parser.DeadEnd -> String -> String

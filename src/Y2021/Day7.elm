@@ -1,6 +1,5 @@
 module Y2021.Day7 exposing (parser, process, processGold)
 
-import Dict exposing (Dict)
 import Parser exposing (Parser)
 
 
