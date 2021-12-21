@@ -2,12 +2,13 @@ module Y2021.Day8 exposing (parser, process, processGold)
 
 import Dict exposing (Dict)
 import List.Extra
+import Maybe.Extra
 import Parser exposing ((|.), (|=), Parser)
 import Set exposing (Set)
 
 
 type alias Item =
-    ( List Signal, List Signal )
+    ( List Signal, { one : Signal, two : Signal, three : Signal, four : Signal } )
 
 
 type alias Signal =
@@ -19,7 +20,16 @@ parser =
     Parser.succeed Tuple.pair
         |= signalListParser
         |. Parser.symbol "| "
-        |= signalListParser
+        |= Parser.andThen
+            (\l ->
+                case l of
+                    [ one, two, three, four ] ->
+                        Parser.succeed { one = one, two = two, three = three, four = four }
+
+                    _ ->
+                        Parser.problem "Too many or two few"
+            )
+            signalListParser
 
 
 signalListParser : Parser (List Signal)
@@ -52,42 +62,25 @@ signalParser =
 
 
 type alias StateRecord =
-    { segments : Dict Char Char
-    , numbers : Dict Int Signal
+    { numbers : Dict String Int
     , log : List String
     }
 
 
 initialState : StateRecord
 initialState =
-    { segments = Dict.empty
-    , numbers = Dict.empty
+    { numbers = Dict.empty
     , log = []
     }
 
 
-getNumber : Int -> Monad Signal
-getNumber i =
-    Monad <|
-        \s ->
-            case Dict.get i s.numbers of
-                Nothing ->
-                    errorInner ("Cannot find number " ++ String.fromInt i) s
-
-                n ->
-                    ( n, s )
-
-
-getSegment : Char -> Monad Char
-getSegment segment =
-    Monad <| \s -> ( Dict.get segment s.segments, s )
-
-
-gotSegmentFromSingleton : Char -> Set Char -> Monad ()
-gotSegmentFromSingleton segment set =
+gotSegmentFromSingleton : Char -> Set Char -> (Char -> Monad a) -> Monad a
+gotSegmentFromSingleton segment set f =
     case Set.toList set of
         [ x ] ->
-            Monad <| \s -> ( Just (), { s | segments = Dict.insert segment x s.segments } )
+            andThen f <|
+                log 1 ("Got segment " ++ String.fromChar segment ++ " from singleton: " ++ String.fromChar x) <| \_ ->
+                pure x
 
         _ ->
             error ("Called gotSegmentFromSingleton " ++ String.fromChar segment ++ " with input " ++ String.fromList (Set.toList set))
@@ -96,6 +89,9 @@ gotSegmentFromSingleton segment set =
 process : List Item -> { output : String, log : String }
 process lines =
     let
+        isUnique x =
+            x == 1 || x == 4 || x == 7 || x == 8
+
         ( logs, outputs ) =
             lines
                 |> List.map
@@ -104,83 +100,97 @@ process lines =
                             p =
                                 processItem item
                         in
-                        ( p.log, p.output )
+                        ( p.log
+                        , Maybe.map
+                            (\{ one, two, three, four } ->
+                                List.Extra.count isUnique [ one, two, three, four ]
+                            )
+                            p.output
+                        )
                     )
                 |> List.unzip
     in
-    { log = String.join "\n" logs
-    , output = String.join "\n" outputs
+    { log = String.join "\n" <| List.Extra.filterNot String.isEmpty logs
+    , output =
+        case Maybe.Extra.combine outputs of
+            Nothing ->
+                "Error"
+
+            Just outs ->
+                String.fromInt <| List.sum outs
     }
 
 
-processItem : Item -> { log : String, output : String }
+isSubsetof : Set comparable -> Set comparable -> Bool
+isSubsetof big small =
+    Set.isEmpty <| Set.diff small big
+
+
+processItem : Item -> { log : String, output : Maybe { one : Int, two : Int, three : Int, four : Int } }
 processItem ( input, output ) =
     let
-        findNumber number condition =
-            case List.Extra.find condition input of
-                Nothing ->
-                    error <| "Could not find number " ++ String.fromInt number
+        findNumber number condition f =
+            andThen f <|
+                case List.filter (\( _, ss ) -> condition ss) input of
+                    [] ->
+                        error <| "Could not find number " ++ String.fromInt number
 
-                Just signal ->
-                    Monad <| \s -> ( Just (), { s | numbers = Dict.insert number signal s.numbers } )
+                    [ ( signalString, signalSet ) ] ->
+                        log 1 ("Found number " ++ String.fromInt number ++ ": " ++ signalString) <| \_ s ->
+                        ( Just signalSet, { s | numbers = Dict.insert signalString number s.numbers } )
 
-        (Monad monad) =
-            log ("Parsed as " ++ itemToString ( input, output ))
-                |> andThen_ (findNumber 1 (\( _, ss ) -> Set.size ss == 2))
-                |> andThen_ (findNumber 4 (\( _, ss ) -> Set.size ss == 4))
-                |> andThen_ (findNumber 7 (\( _, ss ) -> Set.size ss == 3))
-                |> andThen_ (findNumber 8 (\( _, ss ) -> Set.size ss == 7))
-                |> andThen_
-                    (map2 (\( _, seven ) ( _, one ) -> Set.diff seven one)
-                        (getNumber 7)
-                        (getNumber 1)
-                        |> andThen (gotSegmentFromSingleton 'a')
-                    )
-                |> andThen_
-                    (map2 Tuple.pair
-                        (getNumber 4)
-                        (getSegment 'a')
-                        |> andThen
-                            (\( ( _, four ), a ) ->
-                                findNumber 9 (\( _, ss ) -> Set.size ss == 6 && Set.isEmpty (Set.diff (Set.insert a four) ss))
-                            )
-                    )
-                |> andThen_
-                    (map3 (\( _, nine ) ( _, four ) a -> Set.remove a <| Set.diff nine four)
-                        (getNumber 9)
-                        (getNumber 4)
-                        (getSegment 'a')
-                        |> andThen (gotSegmentFromSingleton 'g')
-                    )
-                |> andThen_
-                    (logDict "numbers" String.fromInt Tuple.first .numbers)
-                |> andThen_
-                    (logDict "segments" String.fromChar String.fromChar .segments)
+                    candidates ->
+                        error <| "Too many candidates (" ++ String.fromInt (List.length candidates) ++ ") for number " ++ String.fromInt number
+
+        monad =
+            log 0 ("Parsed as " ++ itemToString ( input, output )) <| \_ ->
+            findNumber 1 (\ss -> Set.size ss == 2) <| \one ->
+            findNumber 4 (\ss -> Set.size ss == 4) <| \four ->
+            findNumber 7 (\ss -> Set.size ss == 3) <| \seven ->
+            findNumber 8 (\ss -> Set.size ss == 7) <| \_ ->
+            gotSegmentFromSingleton 'a' (Set.diff seven one) <| \a ->
+            findNumber 9 (\ss -> Set.size ss == 6 && isSubsetof ss (Set.insert a four)) <| \nine ->
+            gotSegmentFromSingleton 'g' (Set.remove a <| Set.diff nine four) <| \g ->
+            findNumber 3 (\ss -> Set.size ss == 5 && isSubsetof ss (Set.insert a <| Set.insert g one)) <| \three ->
+            gotSegmentFromSingleton 'd' (Set.remove a <| Set.remove g <| Set.diff three one) <| \d ->
+            gotSegmentFromSingleton 'b' (Set.remove d <| Set.diff four one) <| \_ ->
+            findNumber 6 (\ss -> Set.size ss == 6 && not (isSubsetof ss one)) <| \six ->
+            findNumber 5 (\ss -> Set.size ss == 5 && isSubsetof six ss) <| \five ->
+            findNumber 2 (\ss -> Set.size ss == 5 && ss /= five && ss /= three) <| \_ ->
+            findNumber 0 (\ss -> Set.size ss == 6 && ss /= nine && ss /= six) <| \_ ->
+            -- gotSegmentFromSingleton 'c' (Set.diff four five) <| \c ->
+            -- gotSegmentFromSingleton 'e' (Set.diff two three) <| \e ->
+            -- gotSegmentFromSingleton 'f' (Set.intersect one six) <| \f ->
+            getNumber output.one <| \outputNumberOne ->
+            getNumber output.two <| \outputNumberTwo ->
+            getNumber output.three <| \outputNumberThree ->
+            getNumber output.four <| \outputNumberFour ->
+            pure
+                { one = outputNumberOne
+                , two = outputNumberTwo
+                , three = outputNumberThree
+                , four = outputNumberFour
+                }
 
         ( fv, fs ) =
             monad initialState
+
+        finalLog =
+            String.join "\n" <| List.reverse fs.log
     in
-    { log = String.join "\n" <| List.reverse fs.log
-    , output = Debug.toString fv
+    { log = always "" finalLog
+    , output = fv
     }
 
 
-logDict label keyLog valueLog dict =
-    get
-        |> andThen
-            (\s ->
-                log <|
-                    String.join "\n" <|
-                        (label ++ ":")
-                            :: List.map
-                                (\( d, n ) -> "  " ++ keyLog d ++ ": " ++ valueLog n)
-                                (Dict.toList <| dict s)
-            )
+getNumber : Signal -> (Int -> Monad a) -> Monad a
+getNumber ( ss, _ ) f =
+    andThen f <| \s -> ( Dict.get ss s.numbers, s )
 
 
-itemToString : ( List Signal, List Signal ) -> String
+itemToString : Item -> String
 itemToString ( l, r ) =
-    signalListToString l ++ "\n  " ++ signalListToString r
+    signalListToString l ++ "\n  " ++ signalListToString [ r.one, r.two, r.three, r.four ]
 
 
 signalListToString : List Signal -> String
@@ -194,9 +204,34 @@ signalToString =
 
 
 processGold : List Item -> { output : String, log : String }
-processGold _ =
-    { output = ""
-    , log = ""
+processGold lines =
+    let
+        ( logs, outputs ) =
+            lines
+                |> List.map
+                    (\item ->
+                        let
+                            p =
+                                processItem item
+                        in
+                        ( p.log
+                        , Maybe.map
+                            (\{ one, two, three, four } ->
+                                one * 1000 + two * 100 + three * 10 + four
+                            )
+                            p.output
+                        )
+                    )
+                |> List.unzip
+    in
+    { log = String.join "\n" <| List.Extra.filterNot String.isEmpty logs
+    , output =
+        case Maybe.Extra.combine outputs of
+            Nothing ->
+                "Error"
+
+            Just outs ->
+                String.fromInt <| List.sum outs
     }
 
 
@@ -204,72 +239,37 @@ processGold _ =
 -- Eh, shuckit I'm writing a Monad
 
 
-type Monad a
-    = Monad (StateRecord -> ( Maybe a, StateRecord ))
+type alias Monad a =
+    StateRecord -> ( Maybe a, StateRecord )
 
 
 andThen : (a -> Monad b) -> Monad a -> Monad b
-andThen f (Monad i) =
-    Monad <|
-        \s ->
-            let
-                ( v, s_ ) =
-                    i s
-            in
-            case v of
-                Nothing ->
-                    ( Nothing, s_ )
+andThen f i s =
+    let
+        ( v, s_ ) =
+            i s
+    in
+    case v of
+        Nothing ->
+            ( Nothing, s_ )
 
-                Just w ->
-                    let
-                        (Monad fm) =
-                            f w
-                    in
-                    fm s_
-
-
-andThen_ : Monad b -> Monad a -> Monad b
-andThen_ =
-    andThen << always
+        Just w ->
+            f w s_
 
 
 pure : a -> Monad a
-pure x =
-    Monad <| \s -> ( Just x, s )
+pure x s =
+    ( Just x, s )
 
 
-map : (a -> b) -> Monad a -> Monad b
-map f x =
-    x |> andThen (\xv -> pure <| f xv)
-
-
-map2 : (a -> b -> c) -> Monad a -> Monad b -> Monad c
-map2 f x y =
-    x |> andThen (\xv -> map (f xv) y)
-
-
-map3 : (a -> b -> c -> d) -> Monad a -> Monad b -> Monad c -> Monad d
-map3 f x y z =
-    x |> andThen (\xv -> y |> andThen (\yv -> map (f xv yv) z))
-
-
-get : Monad StateRecord
-get =
-    Monad (\s -> ( Just s, s ))
-
-
-log : String -> Monad ()
-log line =
-    Monad <| \s -> ( Just (), { s | log = line :: s.log } )
+log : Int -> String -> (() -> Monad a) -> Monad a
+log indent line f =
+    andThen f <|
+        \s -> ( Just (), { s | log = (String.repeat indent "    " ++ line) :: s.log } )
 
 
 error : String -> Monad a
-error err =
-    Monad <| errorInner err
-
-
-errorInner : String -> StateRecord -> ( Maybe a, StateRecord )
-errorInner err s =
+error err s =
     ( Nothing
-    , { s | log = err :: s.log }
+    , { s | log = ("ERR " ++ err) :: s.log }
     )
