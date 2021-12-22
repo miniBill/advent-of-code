@@ -27,6 +27,7 @@ import Y2021.Day5
 import Y2021.Day6
 import Y2021.Day7
 import Y2021.Day8
+import Y2021.Day9
 
 
 type alias Flags =
@@ -90,6 +91,7 @@ view model =
                 , dayS Y2021.Day6.parser Y2021.Day6.process Y2021.Day6.processGold
                 , dayS Y2021.Day7.parser Y2021.Day7.process Y2021.Day7.processGold
                 , daySplit Y2021.Day8.parser Y2021.Day8.process Y2021.Day8.processGold
+                , daySplit Y2021.Day9.parser Y2021.Day9.process Y2021.Day9.processGold
                 ]
               )
             ]
@@ -163,7 +165,7 @@ view model =
                 in
                 column [ spacing ] <|
                     List.concat
-                        [ if String.isEmpty log then
+                        [ if List.isEmpty log then
                             []
 
                           else
@@ -173,7 +175,7 @@ view model =
                                 , padding
                                 , Font.family [ Font.monospace ]
                                 ]
-                                (text log)
+                                (text <| String.join "\n" log)
                             ]
                         , [ text "Output"
                           , el
@@ -193,7 +195,7 @@ type alias Day =
 
 type alias DayOutput =
     { output : String
-    , log : String
+    , log : List String
     }
 
 
@@ -250,11 +252,10 @@ day parser first second =
 
 withParserS : Parser a -> (a -> String) -> Day
 withParserS parser f =
-    withParser parser <|
-        \input ->
-            { output = f input
-            , log = ""
-            }
+    withParser parser <| \input ->
+    { output = f input
+    , log = []
+    }
 
 
 withParser : Parser a -> (a -> DayOutput) -> Day
@@ -274,7 +275,7 @@ withParser parser f source =
                 errorString =
                     deadEndsToString err source
             in
-            { log = "Failed to parse line:\n\n" ++ errorString
+            { log = [ "Failed to parse line:\n\n" ++ errorString ]
             , output = ""
             }
 

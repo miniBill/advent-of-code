@@ -86,7 +86,7 @@ gotSegmentFromSingleton segment set f =
             error ("Called gotSegmentFromSingleton " ++ String.fromChar segment ++ " with input " ++ String.fromList (Set.toList set))
 
 
-process : List Item -> { output : String, log : String }
+process : List Item -> { output : String, log : List String }
 process lines =
     let
         isUnique x =
@@ -110,7 +110,7 @@ process lines =
                     )
                 |> List.unzip
     in
-    { log = String.join "\n" <| List.Extra.filterNot String.isEmpty logs
+    { log = List.concat logs
     , output =
         case Maybe.Extra.combine outputs of
             Nothing ->
@@ -126,7 +126,7 @@ isSubsetof big small =
     Set.isEmpty <| Set.diff small big
 
 
-processItem : Item -> { log : String, output : Maybe { one : Int, two : Int, three : Int, four : Int } }
+processItem : Item -> { log : List String, output : Maybe { one : Int, two : Int, three : Int, four : Int } }
 processItem ( input, output ) =
     let
         findNumber number condition f =
@@ -172,14 +172,11 @@ processItem ( input, output ) =
                 , four = outputNumberFour
                 }
 
-        ( fv, fs ) =
+        ( finalValue, finalState ) =
             monad initialState
-
-        finalLog =
-            String.join "\n" <| List.reverse fs.log
     in
-    { log = always "" finalLog
-    , output = fv
+    { log = List.reverse <| always [] finalState.log
+    , output = finalValue
     }
 
 
@@ -203,7 +200,7 @@ signalToString =
     Tuple.first
 
 
-processGold : List Item -> { output : String, log : String }
+processGold : List Item -> { output : String, log : List String }
 processGold lines =
     let
         ( logs, outputs ) =
@@ -224,7 +221,7 @@ processGold lines =
                     )
                 |> List.unzip
     in
-    { log = String.join "\n" <| List.Extra.filterNot String.isEmpty logs
+    { log = List.concat logs
     , output =
         case Maybe.Extra.combine outputs of
             Nothing ->
