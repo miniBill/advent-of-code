@@ -20,6 +20,7 @@ import Y2020.Day5
 import Y2020.Day6
 import Y2020.Day7
 import Y2021.Day1
+import Y2021.Day10
 import Y2021.Day2
 import Y2021.Day3
 import Y2021.Day4
@@ -92,6 +93,7 @@ view model =
                 , dayS Y2021.Day7.parser Y2021.Day7.process Y2021.Day7.processGold
                 , daySplit Y2021.Day8.parser Y2021.Day8.process Y2021.Day8.processGold
                 , daySplit Y2021.Day9.parser Y2021.Day9.process Y2021.Day9.processGold
+                , daySplit Y2021.Day10.parser Y2021.Day10.process Y2021.Day10.processGold
                 ]
               )
             ]
