@@ -1,0 +1,7 @@
+{
+    "license": "MIT",
+    "devDependencies": {
+        "elm-pages": "^3.0.9",
+        "elm-test": "^0.19.1-revision12"
+    }
+}
