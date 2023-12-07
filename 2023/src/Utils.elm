@@ -1,4 +1,4 @@
-module Utils exposing (deadEndsToString, justSum, perLineWith, perLineWithParser)
+module Utils exposing (deadEndsToString, justSum, lines, perLineWith, perLineWithParser)
 
 import Parser exposing (Parser)
 import Result.Extra
@@ -12,8 +12,7 @@ justSum list =
 perLineWith : (List b -> Result String a) -> (String -> Result String b) -> String -> Result String a
 perLineWith final perLine input =
     input
-        |> String.split "\n"
-        |> List.filter (\s -> not (String.isEmpty s))
+        |> lines
         |> Result.Extra.combineMap
             (\line ->
                 line
@@ -22,6 +21,13 @@ perLineWith final perLine input =
                         (\e -> e ++ "\n  for line " ++ line)
             )
         |> Result.andThen final
+
+
+lines : String -> List String
+lines input =
+    input
+        |> String.lines
+        |> List.filter (\s -> not (String.isEmpty s))
 
 
 perLineWithParser : Parser a -> (List a -> Result String b) -> String -> Result String b
