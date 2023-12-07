@@ -1,4 +1,4 @@
-module Test2023.Day1 exposing (..)
+module Test2023.Day1 exposing (suite)
 
 import Expect
 import Test exposing (Test, test)
