@@ -6,6 +6,7 @@ import Y2023.Day1 as Day1
 import Y2023.Day2 as Day2
 import Y2023.Day3 as Day3
 import Y2023.Day4 as Day4
+import Y2023.Day5 as Day5
 
 
 solve : Day -> Star -> String -> Result String String
@@ -34,6 +35,12 @@ solve day star =
 
         ( Day4, Gold ) ->
             Day4.gold
+
+        ( Day5, Silver ) ->
+            Day5.silver
+
+        ( Day5, Gold ) ->
+            Day5.gold
 
         _ ->
             \_ -> Err <| "Day " ++ String.fromInt (Day.toInt day) ++ ", " ++ Star.toString star ++ " star not implemented yet"

@@ -1,4 +1,4 @@
-module Utils exposing (deadEndsToString, justSum, lines, perLineWith, perLineWithParser)
+module Utils exposing (deadEndsToString, findMap, justSum, lines, perLineWith, perLineWithParser, withParser)
 
 import Parser exposing (Parser)
 import Result.Extra
@@ -39,6 +39,13 @@ perLineWithParser parser final input =
                 |> Result.mapError deadEndsToString
         )
         input
+
+
+withParser : Parser a -> (a -> Result String b) -> String -> Result String b
+withParser parser final input =
+    Parser.run parser input
+        |> Result.mapError deadEndsToString
+        |> Result.andThen final
 
 
 deadEndsToString : List Parser.DeadEnd -> String
@@ -95,3 +102,18 @@ problemToString p =
 
         Parser.BadRepeat ->
             "bad repeat"
+
+
+findMap : (a -> Maybe b) -> List a -> Maybe b
+findMap f list =
+    case list of
+        [] ->
+            Nothing
+
+        head :: tail ->
+            case f head of
+                (Just _) as j ->
+                    j
+
+                Nothing ->
+                    findMap f tail
