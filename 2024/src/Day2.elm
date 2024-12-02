@@ -1,8 +1,6 @@
 module Day2 exposing (run)
 
 import BackendTask exposing (BackendTask)
-import Dict
-import Dict.Extra
 import FatalError exposing (FatalError)
 import List.Extra
 import Pages.Script as Script exposing (Script)
