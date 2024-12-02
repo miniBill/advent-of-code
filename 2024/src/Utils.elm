@@ -7,7 +7,7 @@ import FatalError exposing (FatalError)
 import Json.Encode
 import List.Extra
 import Pages.Script as Script
-import Parser exposing (Parser)
+import Parser exposing ((|.), Parser)
 import Result.Extra
 
 
@@ -68,7 +68,7 @@ combineParserAndSolver parser solver lines =
     lines
         |> List.indexedMap
             (\index line ->
-                Parser.run parser line
+                Parser.run (parser |. Parser.end) line
                     |> Result.mapError
                         (\_ ->
                             let
