@@ -1,0 +1,9 @@
+{
+    "license": "BSD-3-Clause",
+    "devDependencies": {
+        "elm-format": "^0.8.7",
+        "elm-pages": "^3.0.17",
+        "lamdera": "^0.19.1-1.3.2",
+        "vite": "^5.2.10"
+    }
+}
