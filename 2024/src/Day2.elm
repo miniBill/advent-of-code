@@ -4,7 +4,7 @@ import BackendTask exposing (BackendTask)
 import FatalError exposing (FatalError)
 import List.Extra
 import Pages.Script as Script exposing (Script)
-import Parser exposing ((|.), (|=), Parser)
+import Parser exposing (Parser)
 import Utils
 
 
@@ -25,7 +25,7 @@ run =
 
 task : BackendTask FatalError ()
 task =
-    Utils.testThenRunWithParserBoth
+    Utils.testThenRun
         { day = 2
         , example = example
         , exampleSolution1 = "2"

@@ -26,7 +26,7 @@ run =
 
 task : BackendTask FatalError ()
 task =
-    Utils.testThenRunWithParserBoth
+    Utils.testThenRun
         { day = 1
         , example = example
         , exampleSolution1 = "11"

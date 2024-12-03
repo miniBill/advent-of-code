@@ -1,4 +1,4 @@
-module Utils exposing (..)
+module Utils exposing (testThenRun)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
@@ -11,24 +11,7 @@ import Parser exposing ((|.), Parser)
 import Result.Extra
 
 
-testThenRunWithParser :
-    { day : Int
-    , example : String
-    , exampleSolution : String
-    , parser : Parser item
-    , solver : List item -> BackendTask FatalError String
-    }
-    -> BackendTask FatalError ()
-testThenRunWithParser { day, example, exampleSolution, parser, solver } =
-    testThenRun
-        { day = day
-        , example = example
-        , exampleSolution = exampleSolution
-        , solver = \lines -> combineParserAndSolver parser solver lines
-        }
-
-
-testThenRunWithParserBoth :
+testThenRun :
     { day : Int
     , example : String
     , exampleSolution1 : String
@@ -38,76 +21,52 @@ testThenRunWithParserBoth :
     , solver2 : List item -> BackendTask FatalError String
     }
     -> BackendTask FatalError ()
-testThenRunWithParserBoth { day, example, exampleSolution1, exampleSolution2, parser, solver1, solver2 } =
+testThenRun { day, example, exampleSolution1, exampleSolution2, parser, solver1, solver2 } =
     let
-        combineSolutions l r =
-            l ++ " and " ++ r
-    in
-    testThenRun
-        { day = day
-        , example = example
-        , exampleSolution = combineSolutions exampleSolution1 exampleSolution2
-        , solver =
-            \lines ->
-                combineParserAndSolver parser
-                    (\parsed ->
-                        BackendTask.map2 combineSolutions
-                            (solver1 parsed)
-                            (solver2 parsed)
+        parse : List String -> BackendTask FatalError (List item)
+        parse input =
+            input
+                |> List.indexedMap
+                    (\index line ->
+                        Parser.run (parser |. Parser.end) line
+                            |> Result.mapError
+                                (\_ ->
+                                    let
+                                        msg : String
+                                        msg =
+                                            "Failed to parse line "
+                                                ++ String.fromInt (index + 1)
+                                                ++ ": "
+                                                ++ escape line
+                                    in
+                                    FatalError.fromString msg
+                                )
                     )
-                    lines
-        }
+                |> Result.Extra.combine
+                |> BackendTask.fromResult
+    in
+    Do.do (parse (toLines example)) <| \parsedExample ->
+    Do.do (solver1 parsedExample) <| \exampleActual1 ->
+    if exampleActual1 /= exampleSolution1 then
+        BackendTask.fail (FatalError.fromString ("(part1) Expected example solution to be " ++ escape exampleSolution1 ++ " but got " ++ escape exampleActual1))
 
+    else
+        Do.do (solver2 parsedExample) <| \exampleActual2 ->
+        if exampleActual2 /= exampleSolution2 then
+            BackendTask.fail (FatalError.fromString ("(part2) Expected example solution to be " ++ escape exampleSolution2 ++ " but got " ++ escape exampleActual2))
 
-combineParserAndSolver :
-    Parser item
-    -> (List item -> BackendTask FatalError String)
-    -> List String
-    -> BackendTask FatalError String
-combineParserAndSolver parser solver lines =
-    lines
-        |> List.indexedMap
-            (\index line ->
-                Parser.run (parser |. Parser.end) line
-                    |> Result.mapError
-                        (\_ ->
-                            let
-                                msg : String
-                                msg =
-                                    "Failed to parse line "
-                                        ++ String.fromInt (index + 1)
-                                        ++ ": "
-                                        ++ escape line
-                            in
-                            FatalError.fromString msg
-                        )
-            )
-        |> Result.Extra.combine
-        |> BackendTask.fromResult
-        |> BackendTask.andThen solver
+        else
+            withInputLinesForDay day <| \input ->
+            Do.do (parse input) <| \parsedInput ->
+            Do.do (solver1 parsedInput) <| \solution1 ->
+            Do.do (solver2 parsedInput) <| \solution2 ->
+            Do.log ("Solution (part 1): " ++ solution1) <| \_ ->
+            Script.log ("Solution (part 2): " ++ solution2)
 
 
 escape : String -> String
 escape line =
     Json.Encode.encode 0 (Json.Encode.string line)
-
-
-testThenRun :
-    { day : Int
-    , example : String
-    , exampleSolution : String
-    , solver : List String -> BackendTask FatalError String
-    }
-    -> BackendTask FatalError ()
-testThenRun { day, example, exampleSolution, solver } =
-    Do.do (solver (toLines example)) <| \exampleActual ->
-    if exampleActual /= exampleSolution then
-        BackendTask.fail (FatalError.fromString ("Expected example solution to be " ++ escape exampleSolution ++ " but got " ++ escape exampleActual))
-
-    else
-        withInputLinesForDay day <| \input ->
-        Do.do (solver input) <| \solution ->
-        Script.log ("Solution: " ++ solution)
 
 
 withInputLinesForDay : Int -> (List String -> BackendTask FatalError r) -> BackendTask FatalError r
