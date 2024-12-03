@@ -69,19 +69,15 @@ parser =
 part1 : List (List Instruction) -> BackendTask FatalError String
 part1 lines =
     lines
-        |> List.map
-            (\line ->
-                line
-                    |> List.filterMap
-                        (\instruction ->
-                            case instruction of
-                                Mul a b ->
-                                    Just (a * b)
+        |> List.concat
+        |> List.filterMap
+            (\instruction ->
+                case instruction of
+                    Mul a b ->
+                        Just (a * b)
 
-                                _ ->
-                                    Nothing
-                        )
-                    |> List.sum
+                    _ ->
+                        Nothing
             )
         |> List.sum
         |> String.fromInt
@@ -91,28 +87,24 @@ part1 lines =
 part2 : List (List Instruction) -> BackendTask error String
 part2 lines =
     lines
-        |> List.map
-            (\line ->
-                line
-                    |> List.foldl
-                        (\instruction ( acc, enabled ) ->
-                            case instruction of
-                                Mul a b ->
-                                    if enabled then
-                                        ( acc + a * b, enabled )
+        |> List.concat
+        |> List.foldl
+            (\instruction ( acc, enabled ) ->
+                case instruction of
+                    Mul a b ->
+                        if enabled then
+                            ( acc + a * b, enabled )
 
-                                    else
-                                        ( acc, enabled )
+                        else
+                            ( acc, enabled )
 
-                                Do ->
-                                    ( acc, True )
+                    Do ->
+                        ( acc, True )
 
-                                Dont ->
-                                    ( acc, False )
-                        )
-                        ( 0, True )
-                    |> Tuple.first
+                    Dont ->
+                        ( acc, False )
             )
-        |> List.sum
+            ( 0, True )
+        |> Tuple.first
         |> String.fromInt
         |> BackendTask.succeed

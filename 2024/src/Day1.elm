@@ -1,7 +1,7 @@
 module Day1 exposing (run)
 
 import BackendTask exposing (BackendTask)
-import Dict
+import Dict exposing (Dict)
 import Dict.Extra
 import FatalError exposing (FatalError)
 import Pages.Script as Script exposing (Script)
@@ -51,6 +51,7 @@ part2 lines =
         ( lefts, rights ) =
             List.unzip lines
 
+        counts : Dict Int Int
         counts =
             Dict.Extra.frequencies rights
     in

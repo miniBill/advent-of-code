@@ -85,6 +85,7 @@ isSafe levels =
 
         first :: second :: tail ->
             let
+                direction : Order
                 direction =
                     compare first second
             in
@@ -102,6 +103,7 @@ isSafe levels =
 safeDiff : Int -> Int -> Bool
 safeDiff l r =
     let
+        diff : Int
         diff =
             abs (l - r)
     in
