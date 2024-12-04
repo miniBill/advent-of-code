@@ -7,6 +7,7 @@ import List.Extra
 import Pages.Script as Script exposing (Script)
 import Parser exposing (Parser)
 import Parser.Workaround
+import Triple.Extra
 import Utils
 
 
@@ -48,6 +49,20 @@ S.S.S.S.SS
 """
 
 
+sparse2 : String
+sparse2 =
+    """.M.S......
+..A..MSMS.
+.M.S.MAA..
+..A.ASMSM.
+.M.S.M....
+..........
+S.S.S.S.S.
+.A.A.A.A..
+M.M.M.M.M.
+.........."""
+
+
 run : Script
 run =
     Script.withoutCliOptions task
@@ -58,9 +73,10 @@ task =
     Utils.runLineBased
         { day = 4
         , examples =
-            [ ( smol, 4, -1 )
-            , ( large, 18, -1 )
-            , ( sparse, 18, -1 )
+            [ ( smol, 4, 0 )
+            , ( large, 18, 9 )
+            , ( sparse, 18, 3 )
+            , ( sparse2, 0, 9 )
             ]
         , parser = parser
         , solver1 = part1
@@ -191,4 +207,37 @@ findXmas input =
 
 part2 : List (List Char) -> Int
 part2 lines =
-    -1
+    case lines of
+        first :: second :: tail ->
+            List.foldl
+                (\line ( prev1, prev2, acc ) ->
+                    let
+                        go : List Char -> List Char -> List Char -> Int -> Int
+                        go a b c innerAcc =
+                            case ( a, b, c ) of
+                                ( 'M' :: _ :: 'S' :: _, _ :: 'A' :: _ :: _, 'M' :: _ :: 'S' :: _ ) ->
+                                    go (List.drop 1 a) (List.drop 1 b) (List.drop 1 c) (innerAcc + 1)
+
+                                ( 'M' :: _ :: 'M' :: _, _ :: 'A' :: _ :: _, 'S' :: _ :: 'S' :: _ ) ->
+                                    go (List.drop 1 a) (List.drop 1 b) (List.drop 1 c) (innerAcc + 1)
+
+                                ( 'S' :: _ :: 'M' :: _, _ :: 'A' :: _ :: _, 'S' :: _ :: 'M' :: _ ) ->
+                                    go (List.drop 1 a) (List.drop 1 b) (List.drop 1 c) (innerAcc + 1)
+
+                                ( 'S' :: _ :: 'S' :: _, _ :: 'A' :: _ :: _, 'M' :: _ :: 'M' :: _ ) ->
+                                    go (List.drop 1 a) (List.drop 1 b) (List.drop 1 c) (innerAcc + 1)
+
+                                ( _ :: ((_ :: _ :: _ :: _) as tailA), _ :: ((_ :: _ :: _ :: _) as tailB), _ :: ((_ :: _ :: _ :: _) as tailC) ) ->
+                                    go tailA tailB tailC innerAcc
+
+                                _ ->
+                                    innerAcc
+                    in
+                    ( line, prev1, go line prev1 prev2 acc )
+                )
+                ( second, first, 0 )
+                tail
+                |> Triple.Extra.third
+
+        _ ->
+            0
