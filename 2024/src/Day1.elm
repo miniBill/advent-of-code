@@ -26,11 +26,11 @@ run =
 
 task : BackendTask FatalError ()
 task =
-    Utils.testThenRun
+    Utils.runLineBased
         { day = 1
         , example = example
-        , exampleSolution1 = "11"
-        , exampleSolution2 = "31"
+        , exampleSolution1 = 11
+        , exampleSolution2 = 31
         , parser = parser
         , solver1 = part1
         , solver2 = part2
@@ -45,7 +45,7 @@ parser =
         |= Parser.int
 
 
-part2 : List ( Int, Int ) -> BackendTask error String
+part2 : List ( Int, Int ) -> Int
 part2 lines =
     let
         ( lefts, rights ) =
@@ -58,11 +58,9 @@ part2 lines =
     lefts
         |> List.map (\left -> left * (Dict.get left counts |> Maybe.withDefault 0))
         |> List.sum
-        |> String.fromInt
-        |> BackendTask.succeed
 
 
-part1 : List ( Int, Int ) -> BackendTask FatalError String
+part1 : List ( Int, Int ) -> Int
 part1 lines =
     let
         ( lefts, rights ) =
@@ -73,5 +71,3 @@ part1 lines =
         (List.sort lefts)
         (List.sort rights)
         |> List.sum
-        |> String.fromInt
-        |> BackendTask.succeed

@@ -19,12 +19,12 @@ run =
 
 task : BackendTask FatalError ()
 task =
-    Utils.testThenRun
+    Utils.run
         { day = 3
         , example = example
         , parser = parser
-        , exampleSolution1 = "161"
-        , exampleSolution2 = "48"
+        , exampleSolution1 = 161
+        , exampleSolution2 = 48
         , solver1 = part1
         , solver2 = part2
         }
@@ -66,10 +66,9 @@ parser =
         |> Parser.map (List.filterMap identity)
 
 
-part1 : List (List Instruction) -> BackendTask FatalError String
+part1 : List Instruction -> Int
 part1 lines =
     lines
-        |> List.concat
         |> List.filterMap
             (\instruction ->
                 case instruction of
@@ -80,14 +79,11 @@ part1 lines =
                         Nothing
             )
         |> List.sum
-        |> String.fromInt
-        |> BackendTask.succeed
 
 
-part2 : List (List Instruction) -> BackendTask error String
+part2 : List Instruction -> Int
 part2 lines =
     lines
-        |> List.concat
         |> List.foldl
             (\instruction ( acc, enabled ) ->
                 case instruction of
@@ -106,5 +102,3 @@ part2 lines =
             )
             ( 0, True )
         |> Tuple.first
-        |> String.fromInt
-        |> BackendTask.succeed

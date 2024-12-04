@@ -1,99 +1,111 @@
-module Utils exposing (testThenRun)
+module Utils exposing (run, runLineBased)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
 import BackendTask.Http as Http
 import FatalError exposing (FatalError)
-import Json.Encode
-import List.Extra
 import Pages.Script as Script
 import Parser exposing ((|.), Parser)
-import Result.Extra
 
 
-testThenRun :
+runLineBased :
     { day : Int
     , example : String
-    , exampleSolution1 : String
-    , exampleSolution2 : String
+    , exampleSolution1 : Int
+    , exampleSolution2 : Int
     , parser : Parser item
-    , solver1 : List item -> BackendTask FatalError String
-    , solver2 : List item -> BackendTask FatalError String
+    , solver1 : List item -> Int
+    , solver2 : List item -> Int
     }
     -> BackendTask FatalError ()
-testThenRun { day, example, exampleSolution1, exampleSolution2, parser, solver1, solver2 } =
+runLineBased { day, example, exampleSolution1, exampleSolution2, parser, solver1, solver2 } =
+    run
+        { day = day
+        , example = example
+        , exampleSolution1 = exampleSolution1
+        , exampleSolution2 = exampleSolution2
+        , parser =
+            Parser.sequence
+                { start = ""
+                , end = ""
+                , item = parser
+                , separator = "\n"
+                , spaces = Parser.succeed ()
+                , trailing = Parser.Optional
+                }
+                |. Parser.end
+        , solver1 = solver1
+        , solver2 = solver2
+        }
+
+
+run :
+    { day : Int
+    , example : String
+    , exampleSolution1 : Int
+    , exampleSolution2 : Int
+    , parser : Parser input
+    , solver1 : input -> Int
+    , solver2 : input -> Int
+    }
+    -> BackendTask FatalError ()
+run { day, example, exampleSolution1, exampleSolution2, parser, solver1, solver2 } =
     let
-        parse : List String -> BackendTask FatalError (List item)
+        parse : String -> BackendTask FatalError input
         parse input =
-            input
-                |> List.indexedMap
-                    (\index line ->
-                        Parser.run (parser |. Parser.end) line
-                            |> Result.mapError
-                                (\_ ->
-                                    let
-                                        msg : String
-                                        msg =
-                                            "Failed to parse line "
-                                                ++ String.fromInt (index + 1)
-                                                ++ ": "
-                                                ++ escape line
-                                    in
-                                    FatalError.fromString msg
-                                )
+            Parser.run (parser |. Parser.end) input
+                |> Result.mapError
+                    (\e ->
+                        let
+                            msg : String
+                            msg =
+                                "Failed to parse input: " ++ Debug.toString e
+                        in
+                        FatalError.fromString msg
                     )
-                |> Result.Extra.combine
                 |> BackendTask.fromResult
     in
-    Do.do (parse (toLines example)) <| \parsedExample ->
-    Do.do (solver1 parsedExample) <| \exampleActual1 ->
+    Do.do (parse example) <| \parsedExample ->
+    let
+        exampleActual1 : Int
+        exampleActual1 =
+            solver1 parsedExample
+    in
     if exampleActual1 /= exampleSolution1 then
-        BackendTask.fail (FatalError.fromString ("(part1) Expected example solution to be " ++ escape exampleSolution1 ++ " but got " ++ escape exampleActual1))
+        BackendTask.fail (FatalError.fromString ("(part1) Expected example solution to be " ++ String.fromInt exampleSolution1 ++ " but got " ++ String.fromInt exampleActual1))
 
     else
-        Do.do (solver2 parsedExample) <| \exampleActual2 ->
+        let
+            exampleActual2 : Int
+            exampleActual2 =
+                solver2 parsedExample
+        in
         if exampleActual2 /= exampleSolution2 then
-            BackendTask.fail (FatalError.fromString ("(part2) Expected example solution to be " ++ escape exampleSolution2 ++ " but got " ++ escape exampleActual2))
+            BackendTask.fail (FatalError.fromString ("(part2) Expected example solution to be " ++ String.fromInt exampleSolution2 ++ " but got " ++ String.fromInt exampleActual2))
 
         else
-            withInputLinesForDay day <| \input ->
+            Do.env "SESSION_COOKIE" <| \sessionCookie ->
+            Do.allowFatal
+                (Http.getWithOptions
+                    { url = "https://adventofcode.com/2024/day/" ++ String.fromInt day ++ "/input"
+                    , expect = Http.expectString
+                    , cachePath = Nothing
+                    , cacheStrategy = Nothing
+                    , headers = [ ( "Cookie", "session=" ++ sessionCookie ) ]
+                    , retries = Nothing
+                    , timeoutInMs = Nothing
+                    }
+                )
+            <| \input ->
             Do.do (parse input) <| \parsedInput ->
-            Do.do (solver1 parsedInput) <| \solution1 ->
-            Do.do (solver2 parsedInput) <| \solution2 ->
-            Do.log ("Solution (part 1): " ++ solution1) <| \_ ->
-            Script.log ("Solution (part 2): " ++ solution2)
+            let
+                solution1 : Int
+                solution1 =
+                    solver1 parsedInput
 
-
-escape : String -> String
-escape line =
-    Json.Encode.encode 0 (Json.Encode.string line)
-
-
-withInputLinesForDay : Int -> (List String -> BackendTask FatalError r) -> BackendTask FatalError r
-withInputLinesForDay day f =
-    withInputForDay day <| \input ->
-    f (toLines input)
-
-
-toLines : String -> List String
-toLines input =
-    input
-        |> String.split "\n"
-        |> List.Extra.dropWhileRight String.isEmpty
-
-
-withInputForDay : Int -> (String -> BackendTask FatalError r) -> BackendTask FatalError r
-withInputForDay day f =
-    Do.env "SESSION_COOKIE" <| \sessionCookie ->
-    Do.allowFatal
-        (Http.getWithOptions
-            { url = "https://adventofcode.com/2024/day/" ++ String.fromInt day ++ "/input"
-            , expect = Http.expectString
-            , cachePath = Nothing
-            , cacheStrategy = Nothing
-            , headers = [ ( "Cookie", "session=" ++ sessionCookie ) ]
-            , retries = Nothing
-            , timeoutInMs = Nothing
-            }
-        )
-        f
+                solution2 : Int
+                solution2 =
+                    solver2 parsedInput
+            in
+            Do.log ("Solution (part 1): " ++ String.fromInt solution1) <| \_ ->
+            Script.log ("Solution (part 2): " ++ String.fromInt solution2)

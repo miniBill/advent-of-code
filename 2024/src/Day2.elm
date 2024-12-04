@@ -25,11 +25,11 @@ run =
 
 task : BackendTask FatalError ()
 task =
-    Utils.testThenRun
+    Utils.runLineBased
         { day = 2
         , example = example
-        , exampleSolution1 = "2"
-        , exampleSolution2 = "4"
+        , exampleSolution1 = 2
+        , exampleSolution2 = 4
         , parser = parser
         , solver1 = part1
         , solver2 = part2
@@ -42,33 +42,28 @@ parser =
         { start = ""
         , end = ""
         , separator = ""
-        , spaces = Parser.spaces
+        , spaces = Parser.chompWhile (\c -> c == ' ')
         , item = Parser.int
         , trailing = Parser.Optional
         }
 
 
-part2 : List (List Int) -> BackendTask error String
-part2 lines =
-    lines
-        |> List.Extra.count isDampenedSafe
-        |> String.fromInt
-        |> BackendTask.succeed
-
-
-part1 : List (List Int) -> BackendTask FatalError String
+part1 : List (List Int) -> Int
 part1 lines =
-    lines
-        |> List.Extra.count isSafe
-        |> String.fromInt
-        |> BackendTask.succeed
+    List.Extra.count isSafe lines
+
+
+part2 : List (List Int) -> Int
+part2 lines =
+    List.Extra.count isDampenedSafe lines
 
 
 isDampenedSafe : List Int -> Bool
 isDampenedSafe levels =
-    isSafe levels
-        || List.any (\index -> isSafe (List.Extra.removeAt index levels))
-            (List.range 0 (List.length levels - 1))
+    -- isSafe levels ||
+    List.any
+        (\index -> isSafe (List.Extra.removeAt index levels))
+        (List.range 0 (List.length levels - 1))
 
 
 isSafe : List Int -> Bool
