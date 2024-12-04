@@ -27,9 +27,7 @@ task : BackendTask FatalError ()
 task =
     Utils.runLineBased
         { day = 2
-        , example = example
-        , exampleSolution1 = 2
-        , exampleSolution2 = 4
+        , examples = [ ( example, 2, 4 ) ]
         , parser = parser
         , solver1 = part1
         , solver2 = part2

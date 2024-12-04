@@ -21,10 +21,8 @@ task : BackendTask FatalError ()
 task =
     Utils.run
         { day = 3
-        , example = example
+        , examples = [ ( example, 161, 48 ) ]
         , parser = parser
-        , exampleSolution1 = 161
-        , exampleSolution2 = 48
         , solver1 = part1
         , solver2 = part2
         }
