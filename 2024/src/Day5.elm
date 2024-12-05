@@ -2,6 +2,7 @@ module Day5 exposing (run)
 
 import BackendTask exposing (BackendTask)
 import FatalError exposing (FatalError)
+import List.Extra
 import Pages.Script as Script exposing (Script)
 import Parser exposing ((|.), (|=), Parser)
 import Set exposing (Set)
@@ -157,5 +158,42 @@ middle line =
 
 
 part2 : List Line -> Int
-part2 _ =
-    0
+part2 lines =
+    let
+        ( befores, updates ) =
+            split lines
+
+        bounds : Set ( Int, Int )
+        bounds =
+            Set.fromList befores
+
+        ifIncorrectFixThenMiddle : List Int -> Maybe Int
+        ifIncorrectFixThenMiddle line =
+            if isCorrect bounds line then
+                Nothing
+
+            else
+                Just (middle (fix bounds line))
+    in
+    List.filterMap ifIncorrectFixThenMiddle updates
+        |> List.sum
+
+
+fix : Set ( Int, Int ) -> List Int -> List Int
+fix bounds line =
+    let
+        go : List Int -> List Int -> List Int
+        go queue acc =
+            case queue of
+                [] ->
+                    List.reverse acc
+
+                head :: tail ->
+                    case List.Extra.find (\other -> Set.member ( other, head ) bounds) tail of
+                        Nothing ->
+                            go tail (head :: acc)
+
+                        Just oth ->
+                            go (oth :: head :: List.Extra.remove oth tail) acc
+    in
+    go line []
