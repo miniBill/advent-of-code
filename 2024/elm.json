@@ -11,6 +11,8 @@
             "elm/json": "1.1.3",
             "elm/parser": "1.1.0",
             "elmcraft/core-extra": "2.1.0",
+            "lamdera/codecs": "1.0.0",
+            "lamdera/containers": "1.0.0",
             "pithub/elm-parser-bug-workaround": "1.0.0"
         },
         "indirect": {
