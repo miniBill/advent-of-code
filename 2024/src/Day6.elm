@@ -8,6 +8,7 @@ import Pages.Script as Script exposing (Script)
 import Parser exposing (Parser)
 import Parser.Workaround
 import SeqSet exposing (SeqSet)
+import Set exposing (Set)
 import Utils
 
 
@@ -72,7 +73,8 @@ part1 lines =
             0
 
         Just ( direction, ( r, c ) ) ->
-            part1Grid direction r c grid
+            part1Grid direction r c grid Set.empty
+                |> Set.size
 
 
 type Direction
@@ -114,8 +116,8 @@ rotate direction =
             Up
 
 
-part1Grid : Direction -> Int -> Int -> Grid Char -> Int
-part1Grid direction r c grid =
+part1Grid : Direction -> Int -> Int -> Grid Char -> Set ( Int, Int ) -> Set ( Int, Int )
+part1Grid direction r c grid seen =
     let
         ( nextR, nextC ) =
             case direction of
@@ -131,23 +133,19 @@ part1Grid direction r c grid =
                 Left ->
                     ( r, c - 1 )
 
-        done : Grid Char -> Int
-        done finalGrid =
-            Grid.count ((==) 'X') finalGrid
-
-        nextGrid : Grid Char
-        nextGrid =
-            Grid.set r c 'X' grid
+        nextSeen : Set ( Int, Int )
+        nextSeen =
+            Set.insert ( r, c ) seen
     in
     case Grid.get nextR nextC grid of
         Nothing ->
-            done nextGrid
+            nextSeen
 
         Just '#' ->
-            part1Grid (rotate direction) r c nextGrid
+            part1Grid (rotate direction) r c grid nextSeen
 
         Just _ ->
-            part1Grid direction nextR nextC nextGrid
+            part1Grid direction nextR nextC grid nextSeen
 
 
 part2 : List (List Char) -> Int
@@ -171,32 +169,26 @@ part2 lines =
             0
 
         Just ( direction, ( r, c ) ) ->
-            let
-                gridPoints : List ( Int, Int )
-                gridPoints =
-                    List.Extra.lift2 Tuple.pair
-                        (List.range 0 (Grid.rows grid))
-                        (List.range 0 (Grid.columns grid))
-            in
-            List.Extra.count
-                (\( obsR, obsC ) ->
-                    let
-                        _ =
-                            if obsC == 0 then
-                                Debug.log
-                                    ("Running "
-                                        ++ String.fromInt obsR
-                                        ++ "/"
-                                        ++ String.fromInt (Grid.rows grid)
-                                    )
-                                    ()
+            part1Grid direction r c grid Set.empty
+                |> Set.toList
+                |> List.Extra.count
+                    (\( obsR, obsC ) ->
+                        let
+                            _ =
+                                if obsC == 0 then
+                                    Debug.log
+                                        ("Running "
+                                            ++ String.fromInt obsR
+                                            ++ "/"
+                                            ++ String.fromInt (Grid.rows grid)
+                                        )
+                                        ()
 
-                            else
-                                ()
-                    in
-                    part2Grid direction r c obsR obsC SeqSet.empty grid
-                )
-                gridPoints
+                                else
+                                    ()
+                        in
+                        part2Grid direction r c obsR obsC SeqSet.empty grid
+                    )
 
 
 part2Grid : Direction -> Int -> Int -> Int -> Int -> SeqSet ( Direction, Int, Int ) -> Grid Char -> Bool
