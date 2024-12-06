@@ -173,20 +173,6 @@ part2 lines =
                 |> Set.toList
                 |> List.Extra.count
                     (\( obsR, obsC ) ->
-                        let
-                            _ =
-                                if obsC == 0 then
-                                    Debug.log
-                                        ("Running "
-                                            ++ String.fromInt obsR
-                                            ++ "/"
-                                            ++ String.fromInt (Grid.rows grid)
-                                        )
-                                        ()
-
-                                else
-                                    ()
-                        in
                         part2Grid direction r c obsR obsC SeqSet.empty grid
                     )
 
