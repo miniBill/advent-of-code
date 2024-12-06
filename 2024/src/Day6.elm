@@ -1,17 +1,13 @@
 module Day6 exposing (run)
 
-import Array
 import BackendTask exposing (BackendTask)
-import Dict
 import FatalError exposing (FatalError)
 import Grid exposing (Grid)
 import List.Extra
-import Maybe.Extra
 import Pages.Script as Script exposing (Script)
 import Parser exposing (Parser)
 import Parser.Workaround
 import SeqSet exposing (SeqSet)
-import Triple.Extra
 import Utils
 
 
@@ -198,13 +194,13 @@ part2 lines =
                             else
                                 ()
                     in
-                    part2Grid direction r c SeqSet.empty (Grid.set obsR obsC '#' grid)
+                    part2Grid direction r c obsR obsC SeqSet.empty grid
                 )
                 gridPoints
 
 
-part2Grid : Direction -> Int -> Int -> SeqSet ( Direction, Int, Int ) -> Grid Char -> Bool
-part2Grid direction r c seen grid =
+part2Grid : Direction -> Int -> Int -> Int -> Int -> SeqSet ( Direction, Int, Int ) -> Grid Char -> Bool
+part2Grid direction r c obsR obsC seen grid =
     if SeqSet.member ( direction, r, c ) seen then
         True
 
@@ -223,13 +219,21 @@ part2Grid direction r c seen grid =
 
                     Left ->
                         ( r, c - 1 )
+
+            nextSeen : SeqSet ( Direction, Int, Int )
+            nextSeen =
+                SeqSet.insert ( direction, r, c ) seen
         in
-        case Grid.get nextR nextC grid of
-            Nothing ->
-                False
+        if nextR == obsR && nextC == obsC then
+            part2Grid (rotate direction) r c obsR obsC nextSeen grid
 
-            Just '#' ->
-                part2Grid (rotate direction) r c (SeqSet.insert ( direction, r, c ) seen) grid
+        else
+            case Grid.get nextR nextC grid of
+                Nothing ->
+                    False
 
-            Just _ ->
-                part2Grid direction nextR nextC (SeqSet.insert ( direction, r, c ) seen) grid
+                Just '#' ->
+                    part2Grid (rotate direction) r c obsR obsC nextSeen grid
+
+                Just _ ->
+                    part2Grid direction nextR nextC obsR obsC nextSeen grid
