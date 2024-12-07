@@ -8,6 +8,7 @@
     { "count": 1, "filePath": "src/Day3.elm" },
     { "count": 1, "filePath": "src/Day4.elm" },
     { "count": 1, "filePath": "src/Day5.elm" },
-    { "count": 1, "filePath": "src/Day6.elm" }
+    { "count": 1, "filePath": "src/Day6.elm" },
+    { "count": 1, "filePath": "src/Day7.elm" }
   ]
 }

@@ -81,7 +81,7 @@ run { day, examples, parser, solver1, solver2 } =
                     exampleActual2 =
                         solver2 parsedExample
                 in
-                if exampleActual2 /= exampleSolution2 then
+                if exampleSolution2 /= -1 && exampleActual2 /= exampleSolution2 then
                     BackendTask.fail (FatalError.fromString ("(part2) Expected example solution to be " ++ String.fromInt exampleSolution2 ++ " but got " ++ String.fromInt exampleActual2))
 
                 else
