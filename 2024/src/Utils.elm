@@ -2,10 +2,13 @@ module Utils exposing (run, runLineBased)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
+import BackendTask.File as File
 import BackendTask.Http as Http
+import BackendTask.Time
 import FatalError exposing (FatalError)
 import Pages.Script as Script
 import Parser exposing ((|.), Parser)
+import Time
 
 
 runLineBased :
@@ -58,6 +61,14 @@ run { day, examples, parser, solver1, solver2 } =
                         FatalError.fromString msg
                     )
                 |> BackendTask.fromResult
+
+        timeDiff : Time.Posix -> Time.Posix -> String
+        timeDiff from to =
+            String.fromInt (Time.posixToMillis to - Time.posixToMillis from) ++ "ms"
+
+        path : String
+        path =
+            "input/day" ++ String.fromInt day ++ ".txt"
     in
     Do.each examples
         (\( input, out1, out2 ) ->
@@ -89,27 +100,43 @@ run { day, examples, parser, solver1, solver2 } =
         )
     <| \_ ->
     Do.env "SESSION_COOKIE" <| \sessionCookie ->
-    Do.allowFatal
-        (Http.getWithOptions
-            { url = "https://adventofcode.com/2024/day/" ++ String.fromInt day ++ "/input"
-            , expect = Http.expectString
-            , cachePath = Nothing
-            , cacheStrategy = Nothing
-            , headers = [ ( "Cookie", "session=" ++ sessionCookie ) ]
-            , retries = Nothing
-            , timeoutInMs = Nothing
-            }
+    Do.do
+        (File.rawFile path
+            |> BackendTask.allowFatal
+            |> BackendTask.onError
+                (\_ ->
+                    Do.allowFatal
+                        (Http.getWithOptions
+                            { url = "https://adventofcode.com/2024/day/" ++ String.fromInt day ++ "/input"
+                            , expect = Http.expectString
+                            , cachePath = Nothing
+                            , cacheStrategy = Nothing
+                            , headers = [ ( "Cookie", "session=" ++ sessionCookie ) ]
+                            , retries = Nothing
+                            , timeoutInMs = Nothing
+                            }
+                        )
+                    <| \input ->
+                    Do.allowFatal (Script.writeFile { path = path, body = input }) <| \_ ->
+                    BackendTask.succeed input
+                )
         )
     <| \input ->
+    Do.do BackendTask.Time.now <| \before ->
     Do.do (parse input) <| \parsedInput ->
+    Do.do BackendTask.Time.now <| \afterParser ->
+    Do.log ("Parsed in " ++ timeDiff before afterParser) <| \_ ->
     let
         solution1 : Int
         solution1 =
             solver1 parsedInput
-
+    in
+    Do.do BackendTask.Time.now <| \after1 ->
+    Do.log ("Solution (part 1): " ++ String.fromInt solution1 ++ " [" ++ timeDiff afterParser after1 ++ "]") <| \_ ->
+    let
         solution2 : Int
         solution2 =
             solver2 parsedInput
     in
-    Do.log ("Solution (part 1): " ++ String.fromInt solution1) <| \_ ->
-    Script.log ("Solution (part 2): " ++ String.fromInt solution2)
+    Do.do BackendTask.Time.now <| \after2 ->
+    Script.log ("Solution (part 2): " ++ String.fromInt solution2 ++ " [" ++ timeDiff after1 after2 ++ "]")
