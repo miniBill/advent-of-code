@@ -135,6 +135,7 @@ toIndexedCellsList (Grid grid) =
     Array.foldl
         (\cell ( rowIndex, colIndex, acc ) ->
             let
+                newAcc : List ( Int, Int, a )
                 newAcc =
                     ( rowIndex, colIndex, cell ) :: acc
             in
