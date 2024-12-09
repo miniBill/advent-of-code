@@ -13,6 +13,7 @@
             "elmcraft/core-extra": "2.1.0",
             "lamdera/codecs": "1.0.0",
             "lamdera/containers": "1.0.0",
+            "miniBill/elm-fast-dict": "1.2.1",
             "pithub/elm-parser-bug-workaround": "1.0.0"
         },
         "indirect": {
