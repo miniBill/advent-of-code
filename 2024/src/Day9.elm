@@ -163,6 +163,8 @@ part2 item =
             -- let
             --     _ =
             --         Debug.log "Step" (viewStep (List.concatMap fileToBlocks queue ++ acc))
+            --     _ =
+            --         Debug.log "free" free
             -- in
             case queue of
                 [] ->
@@ -191,24 +193,24 @@ part2 item =
     go expanded.files (Set.toList expanded.free) []
 
 
+viewStep : List ( Int, Id ) -> String
+viewStep blocks =
+    let
+        dict : Dict Int Id
+        dict =
+            Dict.fromList blocks
+    in
+    List.range 0 (Dict.getMaxKey dict |> Maybe.withDefault 0)
+        |> List.map
+            (\i ->
+                case Dict.get i dict of
+                    Just (Id id) ->
+                        String.fromInt id
 
--- viewStep : List ( Int, Id ) -> String
--- viewStep blocks =
---     let
---         dict : Dict Int Id
---         dict =
---             Dict.fromList blocks
---     in
---     List.range 0 (Dict.getMaxKey dict |> Maybe.withDefault 0)
---         |> List.map
---             (\i ->
---                 case Dict.get i dict of
---                     Just (Id id) ->
---                         String.fromInt id
---                     Nothing ->
---                         "."
---             )
---         |> String.concat
+                    Nothing ->
+                        "."
+            )
+        |> String.concat
 
 
 findFreeBlockOfLength : Int -> List ( Int, Int ) -> Maybe ( Int, List ( Int, Int ) )
@@ -269,7 +271,12 @@ expand2 input =
             else
                 ( nextAcc
                 , { files = files
-                  , free = Set.insert ( index, length ) free
+                  , free =
+                        if length > 0 then
+                            Set.insert ( index, length ) free
+
+                        else
+                            free
                   }
                 )
         )
