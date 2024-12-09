@@ -1,6 +1,7 @@
 module Day9 exposing (run)
 
 import BackendTask exposing (BackendTask)
+import FastDict as Dict exposing (Dict)
 import FastSet as Set exposing (Set)
 import FatalError exposing (FatalError)
 import Pages.Script as Script exposing (Script)
@@ -29,7 +30,7 @@ task =
         { day = 9
         , examples =
             [ ( short, 60, -1 )
-            , ( long, 1928, -1 )
+            , ( long, 1928, 2858 )
             ]
         , parser = parser
         , solver1 = part1
@@ -68,38 +69,50 @@ parser =
         }
 
 
+type alias File =
+    { index : Int
+    , id : Id
+    , length : Int
+    }
+
+
 part1 : Item -> Int
 part1 item =
     let
         expanded : { files : List ( Int, Id ), free : Set Int }
         expanded =
-            expand item
+            expand1 item
 
-        go : List ( Int, Id ) -> Set Int -> List ( Int, Id ) -> Int
+        go : List ( Int, Id ) -> List Int -> List ( Int, Id ) -> Int
         go queue free acc =
             case queue of
                 [] ->
-                    acc
-                        |> List.map (\( index, Id id ) -> id * index)
-                        |> List.sum
+                    finalSum acc
 
                 (( index, digit ) as head) :: tail ->
-                    case Set.popMin free of
-                        Nothing ->
-                            go [] free (head :: tail ++ acc)
+                    case free of
+                        [] ->
+                            finalSum (head :: tail ++ acc)
 
-                        Just ( minFree, newFree ) ->
+                        minFree :: newFree ->
                             if minFree < index then
                                 go tail newFree (( minFree, digit ) :: acc)
 
                             else
-                                go [] newFree (head :: tail ++ acc)
+                                finalSum (head :: tail ++ acc)
     in
-    go expanded.files expanded.free []
+    go expanded.files (Set.toList expanded.free) []
 
 
-expand : Item -> { files : List ( Int, Id ), free : Set Int }
-expand input =
+finalSum : List ( Int, Id ) -> Int
+finalSum acc =
+    acc
+        |> List.map (\( index, Id id ) -> id * index)
+        |> List.sum
+
+
+expand1 : Item -> { files : List ( Int, Id ), free : Set Int }
+expand1 input =
     List.foldl
         (\length ( { id, isFile, index }, { files, free } ) ->
             let
@@ -116,11 +129,7 @@ expand input =
             in
             if isFile then
                 ( nextAcc
-                , { files =
-                        List.foldl
-                            (\i acc -> ( i, Id (round id) ) :: acc)
-                            files
-                            range
+                , { files = List.foldl (\i acc -> ( i, Id (round id) ) :: acc) files range
                   , free = free
                   }
                 )
@@ -128,11 +137,7 @@ expand input =
             else
                 ( nextAcc
                 , { files = files
-                  , free =
-                        List.foldl
-                            (\i acc -> Set.insert i acc)
-                            free
-                            range
+                  , free = Set.union (Set.fromList range) free
                   }
                 )
         )
@@ -148,4 +153,131 @@ expand input =
 
 part2 : Item -> Int
 part2 item =
-    0
+    let
+        expanded : { files : List File, free : Set ( Int, Int ) }
+        expanded =
+            expand2 item
+
+        go : List File -> List ( Int, Int ) -> List ( Int, Id ) -> Int
+        go queue free acc =
+            -- let
+            --     _ =
+            --         Debug.log "Step" (viewStep (List.concatMap fileToBlocks queue ++ acc))
+            -- in
+            case queue of
+                [] ->
+                    finalSum acc
+
+                ({ index, id, length } as head) :: tail ->
+                    case findFreeBlockOfLength length free of
+                        Nothing ->
+                            go tail free (fileToBlocks head ++ acc)
+
+                        Just ( minFree, newFree ) ->
+                            if minFree < index then
+                                go tail
+                                    newFree
+                                    (fileToBlocks
+                                        { index = minFree
+                                        , id = id
+                                        , length = length
+                                        }
+                                        ++ acc
+                                    )
+
+                            else
+                                finalSum (List.concatMap fileToBlocks (head :: tail) ++ acc)
+    in
+    go expanded.files (Set.toList expanded.free) []
+
+
+
+-- viewStep : List ( Int, Id ) -> String
+-- viewStep blocks =
+--     let
+--         dict : Dict Int Id
+--         dict =
+--             Dict.fromList blocks
+--     in
+--     List.range 0 (Dict.getMaxKey dict |> Maybe.withDefault 0)
+--         |> List.map
+--             (\i ->
+--                 case Dict.get i dict of
+--                     Just (Id id) ->
+--                         String.fromInt id
+--                     Nothing ->
+--                         "."
+--             )
+--         |> String.concat
+
+
+findFreeBlockOfLength : Int -> List ( Int, Int ) -> Maybe ( Int, List ( Int, Int ) )
+findFreeBlockOfLength length free =
+    let
+        go : List ( Int, Int ) -> List ( Int, Int ) -> Maybe ( Int, List ( Int, Int ) )
+        go queue acc =
+            case queue of
+                [] ->
+                    Nothing
+
+                (( freeIndex, freeLength ) as head) :: tail ->
+                    if freeLength >= length then
+                        Just
+                            ( freeIndex
+                            , if freeLength == length then
+                                List.reverse acc ++ tail
+
+                              else
+                                List.reverse acc ++ ( freeIndex + length, freeLength - length ) :: tail
+                            )
+
+                    else
+                        go tail (head :: acc)
+    in
+    go free []
+
+
+fileToBlocks : File -> List ( Int, Id )
+fileToBlocks { index, id, length } =
+    List.map (\i -> ( i, id )) (List.range index (index + length - 1))
+
+
+expand2 : Item -> { files : List File, free : Set ( Int, Int ) }
+expand2 input =
+    List.foldl
+        (\length ( { id, isFile, index }, { files, free } ) ->
+            let
+                nextAcc : { id : Float, isFile : Bool, index : Int }
+                nextAcc =
+                    { id = id + 0.5
+                    , isFile = not isFile
+                    , index = index + length
+                    }
+            in
+            if isFile then
+                ( nextAcc
+                , { files =
+                        { index = index
+                        , id = Id (round id)
+                        , length = length
+                        }
+                            :: files
+                  , free = free
+                  }
+                )
+
+            else
+                ( nextAcc
+                , { files = files
+                  , free = Set.insert ( index, length ) free
+                  }
+                )
+        )
+        ( { id = 0
+          , isFile = True
+          , index = 0
+          }
+        , { files = [], free = Set.empty }
+        )
+        input
+        |> Tuple.second
