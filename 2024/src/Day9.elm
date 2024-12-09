@@ -188,7 +188,7 @@ part2 item =
                                     )
 
                             else
-                                finalSum (List.concatMap fileToBlocks (head :: tail) ++ acc)
+                                go tail free (fileToBlocks head ++ acc)
     in
     go expanded.files (Set.toList expanded.free) []
 
