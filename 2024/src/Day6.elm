@@ -55,7 +55,7 @@ parser =
 part1 : List (List Char) -> Int
 part1 lines =
     let
-        grid : Grid Char
+        grid : Grid
         grid =
             Grid.fromLists lines
 
@@ -116,7 +116,7 @@ rotate direction =
             Up
 
 
-part1Grid : Direction -> Int -> Int -> Grid Char -> Set ( Int, Int ) -> Set ( Int, Int )
+part1Grid : Direction -> Int -> Int -> Grid -> Set ( Int, Int ) -> Set ( Int, Int )
 part1Grid direction r c grid seen =
     let
         ( nextR, nextC ) =
@@ -151,7 +151,7 @@ part1Grid direction r c grid seen =
 part2 : List (List Char) -> Int
 part2 lines =
     let
-        grid : Grid Char
+        grid : Grid
         grid =
             Grid.fromLists lines
 
@@ -177,7 +177,7 @@ part2 lines =
                     )
 
 
-part2Grid : Direction -> Int -> Int -> Int -> Int -> SeqSet ( Direction, Int, Int ) -> Grid Char -> Bool
+part2Grid : Direction -> Int -> Int -> Int -> Int -> SeqSet ( Direction, Int, Int ) -> Grid -> Bool
 part2Grid direction r c obsR obsC seen grid =
     if SeqSet.member ( direction, r, c ) seen then
         True

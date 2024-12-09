@@ -1,13 +1,23 @@
-module Grid exposing (Grid, columns, count, find, fromLists, get, getUnsafe, rows, set)
+module Grid exposing (GenericGrid, Grid, columns, count, find, fromLists, get, getUnsafe, inRange, parser, rows, set, toIndexedCellsList)
 
 import Array exposing (Array)
+import Parser exposing (Parser)
+import Triple.Extra
 
 
-type Grid a
-    = Grid { rows : Int, columns : Int, cells : Array a }
+type alias Grid =
+    GenericGrid Char
 
 
-fromLists : List (List a) -> Grid a
+type GenericGrid a
+    = Grid
+        { rows : Int
+        , columns : Int
+        , cells : Array a
+        }
+
+
+fromLists : List (List a) -> GenericGrid a
 fromLists lists =
     Grid
         { rows = List.length lists
@@ -20,16 +30,21 @@ fromLists lists =
         }
 
 
-get : Int -> Int -> Grid a -> Maybe a
+get : Int -> Int -> GenericGrid a -> Maybe a
 get r c (Grid grid) =
-    if c < 0 || r < 0 || c >= grid.columns || r >= grid.rows then
-        Nothing
-
-    else
+    if inRange c r (Grid grid) then
         Array.get (r * grid.columns + c) grid.cells
 
+    else
+        Nothing
 
-getUnsafe : Int -> Int -> Grid a -> a
+
+inRange : Int -> Int -> GenericGrid a -> Bool
+inRange c r (Grid grid) =
+    c >= 0 && r >= 0 && c < grid.columns && r < grid.rows
+
+
+getUnsafe : Int -> Int -> GenericGrid a -> a
 getUnsafe r c grid =
     case get r c grid of
         Just res ->
@@ -44,7 +59,7 @@ getUnsafe r c grid =
                 )
 
 
-find : a -> Grid a -> Maybe ( Int, Int )
+find : a -> GenericGrid a -> Maybe ( Int, Int )
 find value (Grid grid) =
     Array.foldl
         (\cell acc ->
@@ -64,20 +79,20 @@ find value (Grid grid) =
         |> Result.toMaybe
 
 
-set : Int -> Int -> a -> Grid a -> Grid a
+set : Int -> Int -> a -> GenericGrid a -> GenericGrid a
 set r c value (Grid grid) =
-    if c < 0 || r < 0 || c >= grid.columns || r >= grid.rows then
-        Grid grid
-
-    else
+    if inRange r c (Grid grid) then
         Grid
             { rows = grid.rows
             , columns = grid.columns
             , cells = Array.set (r * grid.columns + c) value grid.cells
             }
 
+    else
+        Grid grid
 
-count : (a -> Bool) -> Grid a -> Int
+
+count : (a -> Bool) -> GenericGrid a -> Int
 count f (Grid grid) =
     Array.foldl
         (\cell acc ->
@@ -91,11 +106,44 @@ count f (Grid grid) =
         grid.cells
 
 
-rows : Grid a -> Int
+rows : GenericGrid a -> Int
 rows (Grid grid) =
     grid.rows
 
 
-columns : Grid a -> Int
+columns : GenericGrid a -> Int
 columns (Grid grid) =
     grid.columns
+
+
+parser : Parser Grid
+parser =
+    Parser.chompWhile (\_ -> True)
+        |> Parser.getChompedString
+        |> Parser.map
+            (\raw ->
+                raw
+                    |> String.trim
+                    |> String.split "\n"
+                    |> List.map String.toList
+                    |> fromLists
+            )
+
+
+toIndexedCellsList : GenericGrid a -> List ( Int, Int, a )
+toIndexedCellsList (Grid grid) =
+    Array.foldl
+        (\cell ( rowIndex, colIndex, acc ) ->
+            let
+                newAcc =
+                    ( rowIndex, colIndex, cell ) :: acc
+            in
+            if colIndex == grid.columns - 1 then
+                ( rowIndex + 1, 0, newAcc )
+
+            else
+                ( rowIndex, colIndex + 1, newAcc )
+        )
+        ( 0, 0, [] )
+        grid.cells
+        |> Triple.Extra.third
