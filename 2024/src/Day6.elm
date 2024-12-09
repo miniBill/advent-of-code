@@ -6,7 +6,6 @@ import Grid exposing (Grid)
 import List.Extra
 import Pages.Script as Script exposing (Script)
 import Parser exposing (Parser)
-import Parser.Workaround
 import SeqSet exposing (SeqSet)
 import Set exposing (Set)
 import Utils
@@ -34,7 +33,7 @@ run =
 
 task : BackendTask FatalError ()
 task =
-    Utils.runLineBased
+    Utils.run
         { day = 6
         , examples =
             [ ( example, 41, 6 )
@@ -45,20 +44,14 @@ task =
         }
 
 
-parser : Parser (List Char)
+parser : Parser Grid
 parser =
-    Parser.Workaround.chompUntilEndOrBefore "\n"
-        |> Parser.getChompedString
-        |> Parser.map String.toList
+    Grid.parser
 
 
-part1 : List (List Char) -> Int
-part1 lines =
+part1 : Grid -> Int
+part1 grid =
     let
-        grid : Grid
-        grid =
-            Grid.fromLists lines
-
         found : Maybe ( Direction, ( Int, Int ) )
         found =
             [ Up, Down, Right, Left ]
@@ -148,13 +141,9 @@ part1Grid direction r c grid seen =
             part1Grid direction nextR nextC grid nextSeen
 
 
-part2 : List (List Char) -> Int
-part2 lines =
+part2 : Grid -> Int
+part2 grid =
     let
-        grid : Grid
-        grid =
-            Grid.fromLists lines
-
         found : Maybe ( Direction, ( Int, Int ) )
         found =
             [ Up, Down, Right, Left ]
