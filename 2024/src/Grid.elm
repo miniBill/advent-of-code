@@ -1,4 +1,4 @@
-module Grid exposing (GenericGrid, Grid, columns, count, find, fromLists, get, getUnsafe, inRange, parser, rows, set, toIndexedCellsList)
+module Grid exposing (GenericGrid, Grid, columns, count, find, findAll, foldbr, foldul, fromLists, get, getUnsafe, inRange, map, parser, rows, set, toIndexedCellsList)
 
 import Array exposing (Array)
 import Parser exposing (Parser)
@@ -60,23 +60,36 @@ getUnsafe r c grid =
 
 
 find : a -> GenericGrid a -> Maybe ( Int, Int )
-find value (Grid grid) =
-    Array.foldl
-        (\cell acc ->
+find value grid =
+    foldul
+        (\r c cell acc ->
             case acc of
-                Err i ->
+                Just _ ->
+                    acc
+
+                Nothing ->
                     if cell == value then
-                        Ok ( i // grid.columns, modBy grid.columns i )
+                        Just ( r, c )
 
                     else
-                        Err (i + 1)
-
-                Ok _ ->
-                    acc
+                        Nothing
         )
-        (Err 0)
-        grid.cells
-        |> Result.toMaybe
+        Nothing
+        grid
+
+
+findAll : a -> GenericGrid a -> List ( Int, Int )
+findAll value grid =
+    foldbr
+        (\r c cell acc ->
+            if cell == value then
+                ( r, c ) :: acc
+
+            else
+                acc
+        )
+        []
+        grid
 
 
 set : Int -> Int -> a -> GenericGrid a -> GenericGrid a
@@ -146,5 +159,52 @@ toIndexedCellsList (Grid grid) =
                 ( rowIndex, colIndex + 1, newAcc )
         )
         ( 0, 0, [] )
+        grid.cells
+        |> Triple.Extra.third
+
+
+map : (a -> b) -> GenericGrid a -> GenericGrid b
+map f (Grid grid) =
+    Grid
+        { cells = Array.map f grid.cells
+        , rows = grid.rows
+        , columns = grid.columns
+        }
+
+
+foldul :
+    (Int -> Int -> c -> acc -> acc)
+    -> acc
+    -> GenericGrid c
+    -> acc
+foldul f init (Grid grid) =
+    Array.foldl
+        (\cell ( r, c, acc ) ->
+            if c == grid.columns - 1 then
+                ( r + 1, 0, f r c cell acc )
+
+            else
+                ( r, c + 1, f r c cell acc )
+        )
+        ( 0, 0, init )
+        grid.cells
+        |> Triple.Extra.third
+
+
+foldbr :
+    (Int -> Int -> c -> acc -> acc)
+    -> acc
+    -> GenericGrid c
+    -> acc
+foldbr f init (Grid grid) =
+    Array.foldr
+        (\cell ( r, c, acc ) ->
+            if c == 0 then
+                ( r - 1, grid.columns - 1, f r c cell acc )
+
+            else
+                ( r, c - 1, f r c cell acc )
+        )
+        ( grid.rows - 1, grid.columns - 1, init )
         grid.cells
         |> Triple.Extra.third

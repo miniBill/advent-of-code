@@ -1,7 +1,6 @@
 module Day9 exposing (run)
 
 import BackendTask exposing (BackendTask)
-import FastDict as Dict exposing (Dict)
 import FastSet as Set exposing (Set)
 import FatalError exposing (FatalError)
 import Pages.Script as Script exposing (Script)
@@ -193,24 +192,24 @@ part2 item =
     go expanded.files (Set.toList expanded.free) []
 
 
-viewStep : List ( Int, Id ) -> String
-viewStep blocks =
-    let
-        dict : Dict Int Id
-        dict =
-            Dict.fromList blocks
-    in
-    List.range 0 (Dict.getMaxKey dict |> Maybe.withDefault 0)
-        |> List.map
-            (\i ->
-                case Dict.get i dict of
-                    Just (Id id) ->
-                        String.fromInt id
 
-                    Nothing ->
-                        "."
-            )
-        |> String.concat
+-- viewStep : List ( Int, Id ) -> String
+-- viewStep blocks =
+--     let
+--         dict : Dict Int Id
+--         dict =
+--             Dict.fromList blocks
+--     in
+--     List.range 0 (Dict.getMaxKey dict |> Maybe.withDefault 0)
+--         |> List.map
+--             (\i ->
+--                 case Dict.get i dict of
+--                     Just (Id id) ->
+--                         String.fromInt id
+--                     Nothing ->
+--                         "."
+--             )
+--         |> String.concat
 
 
 findFreeBlockOfLength : Int -> List ( Int, Int ) -> Maybe ( Int, List ( Int, Int ) )
