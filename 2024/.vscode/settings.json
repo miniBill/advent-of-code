@@ -1,3 +1,4 @@
 {
-    "elmLS.elmFormatPath": "/home/minibill/bin/elm-format-hack"
+    "elmLS.elmFormatPath": "/home/minibill/bin/elm-format-hack",
+    "cSpell.words": ["foldbr", "foldul"]
 }

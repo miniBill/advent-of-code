@@ -40,8 +40,8 @@ task =
     Utils.run
         { day = 10
         , examples =
-            [ ( example1, 1, -1 )
-            , ( example2, 36, -1 )
+            [ ( example1, 1, 16 )
+            , ( example2, 36, 81 )
             ]
         , parser = parser
         , solver1 = part1
@@ -72,35 +72,7 @@ part1 grid =
 
         graph : Graph Int ()
         graph =
-            Grid.foldul
-                (\r c h acc ->
-                    let
-                        tryLink :
-                            Int
-                            -> Int
-                            -> List ( Graph.NodeId, Graph.NodeId )
-                            -> List ( Graph.NodeId, Graph.NodeId )
-                        tryLink r2 c2 d =
-                            case Grid.get r2 c2 grid of
-                                Nothing ->
-                                    d
-
-                                Just h2 ->
-                                    if h2 == h + 1 then
-                                        ( r * w + c, r2 * w + c2 ) :: d
-
-                                    else
-                                        d
-                    in
-                    acc
-                        |> tryLink (r - 1) c
-                        |> tryLink (r + 1) c
-                        |> tryLink r (c - 1)
-                        |> tryLink r (c + 1)
-                )
-                []
-                grid
-                |> Graph.fromNodeLabelsAndEdgePairs (Grid.foldbr (\_ _ cell acc -> cell :: acc) [] grid)
+            buildGraph grid
     in
     Grid.findAll 0 grid
         |> List.map
@@ -120,6 +92,73 @@ part1 grid =
         |> List.sum
 
 
+buildGraph : GenericGrid Int -> Graph Int ()
+buildGraph grid =
+    let
+        w : Int
+        w =
+            Grid.columns grid
+    in
+    Grid.foldul
+        (\r c h acc ->
+            let
+                tryLink :
+                    Int
+                    -> Int
+                    -> List ( Graph.NodeId, Graph.NodeId )
+                    -> List ( Graph.NodeId, Graph.NodeId )
+                tryLink r2 c2 d =
+                    case Grid.get r2 c2 grid of
+                        Nothing ->
+                            d
+
+                        Just h2 ->
+                            if h2 == h + 1 then
+                                ( r * w + c, r2 * w + c2 ) :: d
+
+                            else
+                                d
+            in
+            acc
+                |> tryLink (r - 1) c
+                |> tryLink (r + 1) c
+                |> tryLink r (c - 1)
+                |> tryLink r (c + 1)
+        )
+        []
+        grid
+        |> Graph.fromNodeLabelsAndEdgePairs (Grid.foldbr (\_ _ cell acc -> cell :: acc) [] grid)
+
+
 part2 : GenericGrid Int -> Int
-part2 _ =
-    0
+part2 grid =
+    let
+        walk : Int -> ( Int, Int ) -> Int
+        walk h ( r, c ) =
+            [ ( r - 1, c )
+            , ( r + 1, c )
+            , ( r, c - 1 )
+            , ( r, c + 1 )
+            ]
+                |> List.map
+                    (\( r2, c2 ) ->
+                        case Grid.get r2 c2 grid of
+                            Nothing ->
+                                0
+
+                            Just h2 ->
+                                if h2 == h + 1 then
+                                    if h2 == 9 then
+                                        1
+
+                                    else
+                                        walk h2 ( r2, c2 )
+
+                                else
+                                    0
+                    )
+                |> List.sum
+    in
+    Grid.findAll 0 grid
+        |> List.map (walk 0)
+        |> List.sum
