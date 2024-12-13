@@ -99,12 +99,12 @@ run { day, examples, parser, solver1, solver2 } =
                     BackendTask.succeed ()
         )
     <| \_ ->
-    Do.env "SESSION_COOKIE" <| \sessionCookie ->
     Do.do
         (File.rawFile path
             |> BackendTask.allowFatal
             |> BackendTask.onError
                 (\_ ->
+                    Do.env "SESSION_COOKIE" <| \sessionCookie ->
                     Do.allowFatal
                         (Http.getWithOptions
                             { url = "https://adventofcode.com/2024/day/" ++ String.fromInt day ++ "/input"
