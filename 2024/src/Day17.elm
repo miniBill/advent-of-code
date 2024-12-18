@@ -4,6 +4,7 @@ import Array exposing (Array)
 import BackendTask exposing (BackendTask)
 import Bitwise
 import FatalError exposing (FatalError)
+import List.Extra
 import Pages.Script as Script exposing (Script)
 import Parser exposing ((|.), (|=), Parser)
 import Utils
@@ -140,6 +141,9 @@ runMachine1 ip a b c program output =
 part2 : Machine -> String
 part2 machine =
     let
+        _ =
+            Debug.log ("\n\n" ++ dump machine) ()
+
         expected : List Int
         expected =
             machine.program
@@ -162,6 +166,85 @@ part2 machine =
                 go (a + 1)
     in
     go 0
+
+
+dump : Machine -> String
+dump { program } =
+    program
+        |> Array.toList
+        |> List.Extra.greedyGroupsOf 2
+        |> List.filterMap
+            (\group ->
+                case group of
+                    [ opcode, operand ] ->
+                        Just (dumpOpcode opcode operand)
+
+                    _ ->
+                        Nothing
+            )
+        |> String.join "\n"
+
+
+dumpOpcode : Int -> Int -> String
+dumpOpcode opcode operand =
+    case opcode of
+        0 ->
+            "a /= 2 ^ " ++ dumpCombo operand
+
+        1 ->
+            "b ^= " ++ String.fromInt operand
+
+        2 ->
+            "b = " ++ dumpCombo operand ++ " % 8"
+
+        3 ->
+            "jnz " ++ String.fromInt operand
+
+        4 ->
+            "b ^= c"
+
+        5 ->
+            "out " ++ String.fromInt operand ++ " % 8"
+
+        6 ->
+            "b /= 2 ^ " ++ dumpCombo operand
+
+        7 ->
+            "c /= 2 ^ " ++ dumpCombo operand
+
+        _ ->
+            "UNKNOWN"
+
+
+dumpCombo : Int -> String
+dumpCombo operand =
+    case operand of
+        0 ->
+            "0"
+
+        1 ->
+            "1"
+
+        2 ->
+            "2"
+
+        3 ->
+            "3"
+
+        4 ->
+            "a"
+
+        5 ->
+            "b"
+
+        6 ->
+            "c"
+
+        7 ->
+            "RESERVED"
+
+        _ ->
+            "UNKNOWN"
 
 
 runMachine2 : Int -> Int -> Int -> Int -> Int -> Array Int -> List Int -> Bool
