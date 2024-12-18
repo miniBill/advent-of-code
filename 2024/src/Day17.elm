@@ -46,11 +46,12 @@ task : BackendTask FatalError ()
 task =
     Utils.runString
         { day = 17
-        , examples =
-            [ ( example1, "1", "" )
-            , ( example2, "5,7,3,0", "117440" )
-            , ( exampleLast, "4,6,3,5,6,3,5,2,1,0", "" )
-            ]
+        , examples = []
+
+        -- [ ( example1, "1", "" )
+        -- , ( example2, "5,7,3,0", "117440" )
+        -- , ( exampleLast, "4,6,3,5,6,3,5,2,1,0", "" )
+        -- ]
         , parser = parser
         , solver1 = part1
         , solver2 = part2
@@ -151,7 +152,7 @@ part2 machine =
 
         go : Int -> String
         go a =
-            if runMachine2 1000000 0 a machine.b machine.c machine.program expected then
+            if runMachine2 0 a machine.b machine.c machine.program expected then
                 String.fromInt a
 
             else
@@ -165,7 +166,10 @@ part2 machine =
                 in
                 go (a + 1)
     in
-    go 0
+    go
+        (machine.program
+            |> Array.foldr (\d acc -> acc * 8 + Bitwise.xor d 3) 0
+        )
 
 
 dump : Machine -> String
@@ -204,7 +208,7 @@ dumpOpcode opcode operand =
             "b ^= c"
 
         5 ->
-            "out " ++ String.fromInt operand ++ " % 8"
+            "out " ++ dumpCombo operand ++ " % 8"
 
         6 ->
             "b /= 2 ^ " ++ dumpCombo operand
@@ -247,67 +251,59 @@ dumpCombo operand =
             "UNKNOWN"
 
 
-runMachine2 : Int -> Int -> Int -> Int -> Int -> Array Int -> List Int -> Bool
-runMachine2 budget ip a b c program expected =
-    if budget <= 0 then
-        let
-            _ =
-                Debug.log "Ran out of budget" ()
-        in
-        False
+runMachine2 : Int -> Int -> Int -> Int -> Array Int -> List Int -> Bool
+runMachine2 ip a b c program expected =
+    case ( Array.get ip program, Array.get (ip + 1) program ) of
+        ( Nothing, _ ) ->
+            List.isEmpty expected
 
-    else
-        case ( Array.get ip program, Array.get (ip + 1) program ) of
-            ( Nothing, _ ) ->
-                List.isEmpty expected
+        ( Just 0, Just operand ) ->
+            runMachine2 (ip + 2) (a // pow a b c operand) b c program expected
 
-            ( Just 0, Just operand ) ->
-                runMachine2 (budget - 1) (ip + 2) (a // pow a b c operand) b c program expected
+        ( Just 1, Just operand ) ->
+            runMachine2 (ip + 2) a (Bitwise.xor b operand) c program expected
 
-            ( Just 1, Just operand ) ->
-                runMachine2 (budget - 1) (ip + 2) a (Bitwise.xor b operand) c program expected
+        ( Just 2, Just operand ) ->
+            runMachine2 (ip + 2) a (modBy 8 (comboValue a b c operand)) c program expected
 
-            ( Just 2, Just operand ) ->
-                runMachine2 (budget - 1) (ip + 2) a (modBy 8 (comboValue a b c operand)) c program expected
+        ( Just 3, Just operand ) ->
+            if a == 0 then
+                runMachine2 (ip + 2) a b c program expected
 
-            ( Just 3, Just operand ) ->
-                if a == 0 then
-                    runMachine2 (budget - 1) (ip + 2) a b c program expected
+            else
+                runMachine2 operand a b c program expected
 
-                else
-                    runMachine2 (budget - 1) operand a b c program expected
+        ( Just 4, Just _ ) ->
+            runMachine2 (ip + 2) a (Bitwise.xor b c) c program expected
 
-            ( Just 4, Just _ ) ->
-                runMachine2 (budget - 1) (ip + 2) a (Bitwise.xor b c) c program expected
+        ( Just 5, Just operand ) ->
+            case expected of
+                [] ->
+                    False
 
-            ( Just 5, Just operand ) ->
-                case expected of
-                    [] ->
+                head :: tail ->
+                    let
+                        out : Int
+                        out =
+                            modBy 8 (comboValue a b c operand)
+                    in
+                    if out == head then
+                        runMachine2 (ip + 2) a b c program tail
+
+                    else
                         False
 
-                    head :: tail ->
-                        let
-                            out : Int
-                            out =
-                                modBy 8 (comboValue a b c operand)
-                        in
-                        if out == head then
-                            runMachine2 (budget - 1) (ip + 2) a b c program tail
+        ( Just 6, Just operand ) ->
+            runMachine2 (ip + 2) a (a // pow a b c operand) c program expected
 
-                        else
-                            False
+        ( Just 7, Just operand ) ->
+            runMachine2 (ip + 2) a b (a // pow a b c operand) program expected
 
-            ( Just 6, Just operand ) ->
-                runMachine2 (budget - 1) (ip + 2) a (a // pow a b c operand) c program expected
+        ( Just opcode, Just _ ) ->
+            Debug.todo ("Missing opcode: " ++ String.fromInt opcode)
 
-            ( Just 7, Just operand ) ->
-                runMachine2 (budget - 1) (ip + 2) a b (a // pow a b c operand) program expected
-
-            ( Just opcode, Just _ ) ->
-                Debug.todo ("Missing opcode: " ++ String.fromInt opcode)
-
-            ( _, Nothing ) ->
-                Debug.todo "Reading off tape"
+        ( _, Nothing ) ->
+            Debug.todo "Reading off tape"
 
 
 pow : Int -> Int -> Int -> Int -> Int
