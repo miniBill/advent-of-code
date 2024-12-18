@@ -57,8 +57,7 @@ task =
 
 
 type alias Machine =
-    { ip : Int
-    , a : Int
+    { a : Int
     , b : Int
     , c : Int
     , program : Array Int
@@ -67,7 +66,7 @@ type alias Machine =
 
 parser : Parser Machine
 parser =
-    Parser.succeed (Machine 0)
+    Parser.succeed Machine
         |. Parser.symbol "Register A: "
         |= Parser.int
         |. Parser.spaces
@@ -92,7 +91,7 @@ parser =
 
 part1 : Machine -> String
 part1 machine =
-    runMachine1 machine.ip machine.a machine.b machine.c machine.program []
+    runMachine1 0 machine.a machine.b machine.c machine.program []
         |> List.map String.fromInt
         |> String.join ","
 
@@ -148,7 +147,7 @@ part2 machine =
 
         go : Int -> String
         go a =
-            if runMachine2 1000000 machine.ip a machine.b machine.c machine.program expected then
+            if runMachine2 1000000 0 a machine.b machine.c machine.program expected then
                 String.fromInt a
 
             else
