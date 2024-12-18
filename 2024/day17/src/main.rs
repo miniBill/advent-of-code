@@ -39,12 +39,13 @@ fn main() {
     // let expected_example3_part1 = "4,6,3,5,6,3,5,2,1,0";
 }
 
-fn part2(machine: &Machine) -> u64 {
-    (0..u64::MAX)
+fn part2(machine: &Machine) -> usize {
+    (0..usize::MAX)
         .into_par_iter()
+        .by_exponential_blocks()
         .find_first(|initial_a| {
             let mut ip: usize = 0;
-            let mut a: u64 = *initial_a;
+            let mut a: u64 = *initial_a as u64;
             let mut b: u64 = machine.b;
             let mut c: u64 = machine.c;
             let mut output_length: usize = 0;
