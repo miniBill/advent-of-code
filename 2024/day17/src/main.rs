@@ -1,90 +1,67 @@
-use rayon::prelude::*;
-
-struct Machine {
-    a: u64,
-    b: u64,
-    c: u64,
-    program: Vec<u8>,
-}
-
 fn main() {
-    // let example1 = Machine {
-    //     a: 0,
-    //     b: 0,
-    //     c: 9,
-    //     program: vec![2, 6, 5, 5],
-    // };
-    // let expected_example1_part1 = "1";
-
-    let example2 = Machine {
-        a: 2024,
-        b: 0,
-        c: 0,
-        program: vec![0, 3, 5, 4, 3, 0],
-    };
-    let expected_example2_part2 = 117440;
-
-    if part2(&example2) != expected_example2_part2 {
-        panic!("Wrong result for the example");
-    } else {
-        println!("Example checks out.")
-    }
-
-    // let example3 = Machine {
-    //     a: 729,
-    //     b: 0,
-    //     c: 0,
-    //     program: vec![0, 1, 5, 4, 3, 0],
-    // };
-    // let expected_example3_part1 = "4,6,3,5,6,3,5,2,1,0";
+    println!(
+        "{}",
+        part2(vec![9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9])
+    );
 }
 
-fn part2(machine: &Machine) -> usize {
-    (0..usize::MAX)
-        .into_par_iter()
-        .by_exponential_blocks()
-        .find_first(|initial_a| {
-            let mut ip: usize = 0;
-            let mut a: u64 = *initial_a as u64;
-            let mut b: u64 = machine.b;
-            let mut c: u64 = machine.c;
-            let mut output_length: usize = 0;
-            loop {
-                if ip >= machine.program.len() {
-                    return output_length == machine.program.len();
+fn part2(program: Vec<u8>) -> usize {
+    let attempt: usize = program
+        .iter()
+        .rfold(0, |acc, x| (acc * 8) + (*x as usize) ^ 3);
+    if check_machine(attempt, &program) && false {
+        return attempt;
+    } else {
+        println!(
+            "I'm missing something {} {:o} {:?}",
+            attempt, attempt, program
+        );
+        return attempt;
+    }
+}
+
+fn check_machine(initial_a: usize, program: &Vec<u8>) -> bool {
+    let mut ip: usize = 0;
+    let mut a: u64 = initial_a as u64;
+    let mut b: u64 = 0;
+    let mut c: u64 = 0;
+    let mut output_length: usize = 0;
+    loop {
+        if ip >= program.len() {
+            println!();
+            return output_length == program.len();
+        }
+        let mut next_ip: usize = ip + 2;
+        let operand: u8 = program[ip + 1];
+        match program[ip] {
+            0 => a /= 2u64.pow(combo(a, b, c, operand) as u32),
+            1 => b ^= operand as u64,
+            2 => b = combo(a, b, c, operand) % 8,
+            3 => {
+                if a != 0 {
+                    next_ip = operand as usize;
                 }
-                let mut next_ip: usize = ip + 2;
-                let operand: u8 = machine.program[ip + 1];
-                match machine.program[ip] {
-                    0 => a /= 2u64.pow(combo(a, b, c, operand) as u32),
-                    1 => b ^= operand as u64,
-                    2 => b = combo(a, b, c, operand) % 8,
-                    3 => {
-                        if a != 0 {
-                            next_ip = operand as usize;
-                        }
-                    }
-                    4 => b ^= c,
-                    5 => {
-                        if output_length == machine.program.len() {
-                            return false;
-                        }
-                        let expected: u8 = machine.program[output_length];
-                        let actual: u64 = combo(a, b, c, operand) % 8;
-                        if expected as u64 != actual {
-                            return false;
-                        } else {
-                            output_length += 1;
-                        }
-                    }
-                    6 => b /= 2u64.pow(combo(a, b, c, operand) as u32),
-                    7 => c /= 2u64.pow(combo(a, b, c, operand) as u32),
-                    8_u8..=u8::MAX => panic!("Invalid opcode {}", machine.program[ip]),
-                }
-                ip = next_ip;
             }
-        })
-        .expect("No valid a found")
+            4 => b ^= c,
+            5 => {
+                let actual: u64 = combo(a, b, c, operand) % 8;
+                print!("{},", actual);
+                if output_length == program.len() {
+                    return false;
+                }
+                let expected: u8 = program[output_length];
+                if expected as u64 != actual && false {
+                    return false;
+                } else {
+                    output_length += 1;
+                }
+            }
+            6 => b /= 2u64.pow(combo(a, b, c, operand) as u32),
+            7 => c /= 2u64.pow(combo(a, b, c, operand) as u32),
+            8_u8..=u8::MAX => panic!("Invalid opcode {}", program[ip]),
+        }
+        ip = next_ip;
+    }
 }
 
 /*
