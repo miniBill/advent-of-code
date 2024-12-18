@@ -1,4 +1,4 @@
-module Utils exposing (run, runLineBased)
+module Utils exposing (run, runLineBased, runString)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
@@ -47,6 +47,40 @@ run :
     }
     -> BackendTask FatalError ()
 run { day, examples, parser, solver1, solver2 } =
+    runString
+        { day = day
+        , examples =
+            examples
+                |> List.map
+                    (\( input, output1, output2 ) ->
+                        ( input
+                        , if output1 == -1 then
+                            ""
+
+                          else
+                            String.fromInt output1
+                        , if output2 == -1 then
+                            ""
+
+                          else
+                            String.fromInt output2
+                        )
+                    )
+        , parser = parser
+        , solver1 = \input -> input |> solver1 |> String.fromInt
+        , solver2 = \input -> input |> solver2 |> String.fromInt
+        }
+
+
+runString :
+    { day : Int
+    , examples : List ( String, String, String )
+    , parser : Parser input
+    , solver1 : input -> String
+    , solver2 : input -> String
+    }
+    -> BackendTask FatalError ()
+runString { day, examples, parser, solver1, solver2 } =
     let
         parse : String -> BackendTask FatalError input
         parse input =
@@ -79,24 +113,27 @@ run { day, examples, parser, solver1, solver2 } =
     Do.each parsedExamples
         (\( parsedExample, exampleSolution1, exampleSolution2 ) ->
             let
-                exampleActual1 : Int
+                exampleActual1 : String
                 exampleActual1 =
                     solver1 parsedExample
             in
             if exampleActual1 /= exampleSolution1 then
-                BackendTask.fail (FatalError.fromString ("(part1) Expected example solution to be " ++ String.fromInt exampleSolution1 ++ " but got " ++ String.fromInt exampleActual1))
+                BackendTask.fail (FatalError.fromString ("(part1) Expected example solution to be " ++ exampleSolution1 ++ " but got " ++ exampleActual1))
 
-            else
+            else if not (String.isEmpty exampleSolution2) then
                 let
-                    exampleActual2 : Int
+                    exampleActual2 : String
                     exampleActual2 =
                         solver2 parsedExample
                 in
-                if exampleSolution2 /= -1 && exampleActual2 /= exampleSolution2 then
-                    BackendTask.fail (FatalError.fromString ("(part2) Expected example solution to be " ++ String.fromInt exampleSolution2 ++ " but got " ++ String.fromInt exampleActual2))
+                if exampleActual2 /= exampleSolution2 then
+                    BackendTask.fail (FatalError.fromString ("(part2) Expected example solution to be " ++ exampleSolution2 ++ " but got " ++ exampleActual2))
 
                 else
                     BackendTask.succeed ()
+
+            else
+                BackendTask.succeed ()
         )
     <| \_ ->
     Do.do
@@ -127,16 +164,16 @@ run { day, examples, parser, solver1, solver2 } =
     Do.do BackendTask.Time.now <| \afterParser ->
     Do.log ("Parsed in " ++ timeDiff before afterParser) <| \_ ->
     let
-        solution1 : Int
+        solution1 : String
         solution1 =
             solver1 parsedInput
     in
     Do.do BackendTask.Time.now <| \after1 ->
-    Do.log ("Solution (part 1): " ++ String.fromInt solution1 ++ " [" ++ timeDiff afterParser after1 ++ "]") <| \_ ->
+    Do.log ("Solution (part 1): " ++ solution1 ++ " [" ++ timeDiff afterParser after1 ++ "]") <| \_ ->
     let
-        solution2 : Int
+        solution2 : String
         solution2 =
             solver2 parsedInput
     in
     Do.do BackendTask.Time.now <| \after2 ->
-    Script.log ("Solution (part 2): " ++ String.fromInt solution2 ++ " [" ++ timeDiff after1 after2 ++ "]")
+    Script.log ("Solution (part 2): " ++ solution2 ++ " [" ++ timeDiff after1 after2 ++ "]")
