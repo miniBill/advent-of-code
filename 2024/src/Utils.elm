@@ -111,16 +111,29 @@ runString { day, examples, parser, solver1, solver2 } =
         )
     <| \parsedExamples ->
     Do.each parsedExamples
-        (\( parsedExample, exampleSolution1, exampleSolution2 ) ->
-            let
-                exampleActual1 : String
-                exampleActual1 =
-                    solver1 parsedExample
-            in
-            if exampleActual1 /= exampleSolution1 then
-                BackendTask.fail (FatalError.fromString ("(part1) Expected example solution to be " ++ exampleSolution1 ++ " but got " ++ exampleActual1))
+        (\( parsedExample, exampleSolution1, _ ) ->
+            if String.isEmpty exampleSolution1 then
+                BackendTask.succeed ()
 
-            else if not (String.isEmpty exampleSolution2) then
+            else
+                let
+                    exampleActual1 : String
+                    exampleActual1 =
+                        solver1 parsedExample
+                in
+                if exampleActual1 /= exampleSolution1 then
+                    BackendTask.fail (FatalError.fromString ("(part1) Expected example solution to be " ++ exampleSolution1 ++ " but got " ++ exampleActual1))
+
+                else
+                    BackendTask.succeed ()
+        )
+    <| \_ ->
+    Do.each parsedExamples
+        (\( parsedExample, _, exampleSolution2 ) ->
+            if String.isEmpty exampleSolution2 then
+                BackendTask.succeed ()
+
+            else
                 let
                     exampleActual2 : String
                     exampleActual2 =
@@ -131,11 +144,9 @@ runString { day, examples, parser, solver1, solver2 } =
 
                 else
                     BackendTask.succeed ()
-
-            else
-                BackendTask.succeed ()
         )
     <| \_ ->
+    Do.log "Examples check out" <| \_ ->
     Do.do
         (File.rawFile path
             |> BackendTask.allowFatal
