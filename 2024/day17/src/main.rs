@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 fn main() {
     println!(
         "{}",
@@ -6,21 +8,20 @@ fn main() {
 }
 
 fn part2(program: Vec<u8>) -> usize {
-    let attempt: usize = program
-        .iter()
-        .rfold(0, |acc, x| (acc * 8) + (*x as usize) ^ 3);
-    if check_machine(attempt, &program) && false {
-        return attempt;
-    } else {
-        println!(
-            "I'm missing something {} {:o} {:?}",
-            attempt, attempt, program
-        );
-        return attempt;
-    }
+    let size: usize = program.iter().rfold(0, |acc, _x| (acc * 8) + 7);
+    let start: usize = (size + 1) / 8;
+    println!("Starting from {}", start);
+    (start..usize::MAX)
+        .into_par_iter()
+        .by_exponential_blocks()
+        .find_first(|initial_a| check_machine(*initial_a, &program))
+        .expect("No solution")
 }
 
 fn check_machine(initial_a: usize, program: &Vec<u8>) -> bool {
+    if initial_a % 1_000_000_000 == 0 {
+        println!("{}", initial_a);
+    }
     let mut ip: usize = 0;
     let mut a: u64 = initial_a as u64;
     let mut b: u64 = 0;
@@ -28,7 +29,7 @@ fn check_machine(initial_a: usize, program: &Vec<u8>) -> bool {
     let mut output_length: usize = 0;
     loop {
         if ip >= program.len() {
-            println!();
+            // println!();
             return output_length == program.len();
         }
         let mut next_ip: usize = ip + 2;
@@ -45,12 +46,12 @@ fn check_machine(initial_a: usize, program: &Vec<u8>) -> bool {
             4 => b ^= c,
             5 => {
                 let actual: u64 = combo(a, b, c, operand) % 8;
-                print!("{},", actual);
+                // print!("{},", actual);
                 if output_length == program.len() {
                     return false;
                 }
                 let expected: u8 = program[output_length];
-                if expected as u64 != actual && false {
+                if expected as u64 != actual {
                     return false;
                 } else {
                     output_length += 1;
