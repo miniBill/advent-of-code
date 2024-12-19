@@ -211,10 +211,10 @@ dumpOpcode opcode operand =
             "out " ++ dumpCombo operand ++ " % 8"
 
         6 ->
-            "b /= 2 ^ " ++ dumpCombo operand
+            "b = a / 2 ^ " ++ dumpCombo operand
 
         7 ->
-            "c /= 2 ^ " ++ dumpCombo operand
+            "c = a / 2 ^ " ++ dumpCombo operand
 
         _ ->
             "UNKNOWN"
