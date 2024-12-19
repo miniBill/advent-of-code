@@ -56,27 +56,13 @@ fn check_machine(initial_a: usize, program: &Vec<u8>) -> bool {
                     output_length += 1;
                 }
             }
-            6 => b /= 2u64.pow(combo(a, b, c, operand) as u32),
-            7 => c /= 2u64.pow(combo(a, b, c, operand) as u32),
+            6 => b = a / 2u64.pow(combo(a, b, c, operand) as u32),
+            7 => c = a / 2u64.pow(combo(a, b, c, operand) as u32),
             8_u8..=u8::MAX => panic!("Invalid opcode {}", program[ip]),
         }
         ip = next_ip;
     }
 }
-
-/*
-        ( Just 6, Just operand ) ->
-            runMachine2 (budget - 1) (ip + 2) a (a // pow a b c operand) c program expected
-
-        ( Just 7, Just operand ) ->
-            runMachine2 (budget - 1) (ip + 2) a b (a // pow a b c operand) program expected
-
-        ( Just opcode, Just _ ) ->
-            Debug.todo ("Missing opcode: " ++ String.fromInt opcode)
-
-        ( _, Nothing ) ->
-            Debug.todo "Reading off tape"
-*/
 
 fn combo(a: u64, b: u64, c: u64, operand: u8) -> u64 {
     match operand {
